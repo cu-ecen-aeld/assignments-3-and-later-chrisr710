@@ -1,5 +1,10 @@
 #include "systemcalls.h"
-
+#include "stdio.h"
+#include "stdlib.h"
+#include "unistd.h"
+#include <fcntl.h>
+#include <sys/wait.h>
+char * myname="parent";
 /**
  * @param cmd the command to execute with system()
  * @return true if the command in @param cmd was executed
@@ -16,8 +21,15 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
-
-    return true;
+    //printf("doing system: %s\n",cmd);
+    int var=0;
+    var=system(cmd);
+    //printf("var=%d\n",var);
+    //printf("returning\n");
+    if (var == 0){    
+		return true;
+		}
+    return(false);
 }
 
 /**
@@ -47,7 +59,37 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    //command[count] = command[count];
+    //command[count] = command[count];
+    char * command_to_run=command[0];
+    int fork_ret;
+    fork_ret=fork();
+    printf("fork return:%d\n",fork_ret);
+    if (fork_ret <0){printf("fork return is less than 1\n");return(false);}
+    if (fork_ret >0){
+                        //this is the parent
+                        int status = 0;
+                        printf("The new process is: %d\n",fork_ret);
+                        wait(&status);
+                        printf("exit status of the new process: %d\n",WEXITSTATUS(status));
+                        if (status==0){
+                                return(true);
+                                        }
+                        else{
+                                return(false);
+                                }
+                    }
+     if (fork_ret==0){ //this is the child
+                printf("setting myname to child\n");
+                myname="child";
+                //int fd;
+                int ret=0;
+                //dup2(fd,1);
+                ret = execv(command_to_run,command);
+                printf("ret=%d\n",ret);
+                printf("returning false\n");
+                exit(1);
+                        }
 
 /*
  * TODO:
@@ -58,6 +100,11 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+
+
+
+
+
 
     va_end(args);
 
@@ -71,6 +118,7 @@ bool do_exec(int count, ...)
 */
 bool do_exec_redirect(const char *outputfile, int count, ...)
 {
+    printf("output file is:%s\n",outputfile);
     va_list args;
     va_start(args, count);
     char * command[count+1];
@@ -78,11 +126,45 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
+        printf("command at [%d] is %s\n",i,command[i]);
     }
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
     command[count] = command[count];
+    char * command_to_run=command[0];
+    int fork_ret;
+    fork_ret=fork();
+    printf("fork return:%d\n",fork_ret);
+    if (fork_ret <0){printf("fork return is less than 1\n");return(false);}
+    if (fork_ret >0){
+			//this is the parent
+			int status = 0;
+                        printf("The new process is: %d\n",fork_ret);
+			wait(&status);
+			printf("exit status of the new process: %d\n",WEXITSTATUS(status));
+			if (status==0){
+				return(true);
+					}
+			else{
+				return(false);
+				}
+		    }
+    if (fork_ret==0){ //this is the child
+		printf("setting myname to child\n");
+		myname="child";
+        	int fd;
+    		fd=open(outputfile,O_TRUNC | O_WRONLY | O_CREAT, 0644);
+    		if (fd < 0) { perror("open"); exit(1); }
+    		int ret=0;
+    		dup2(fd,1);
+    		ret = execv(command_to_run,command);
+    		printf("ret=%d\n",ret);
+    		printf("returning false\n");
+    		exit(1);
+			}
+    
+
 
 
 /*
@@ -94,6 +176,19 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 */
 
     va_end(args);
-
     return true;
 }
+//int main( int argc, char *argv[])
+//{
+//printf("arg is %s\n",argv[1]);
+//int cmdlen=argc -1;
+//printf("cmdlen=%d\n",cmdlen);
+//bool x;
+//x=do_system(argv[1]);
+//do_exec_redirect("null",cmdlen,argv);
+//x=do_exec_redirect("dummy_ouptut_file",2,"/usr/bin/echo","/home/school/school-repository/examples/systemcalls");
+//x=do_exec(2,"/usr/bins/echo","hi there!");
+//x=do_system("/usr/bind/echo hello");
+//printf("Final Output %s: %s\n", myname,x ? "true" : "false");
+//}
+
