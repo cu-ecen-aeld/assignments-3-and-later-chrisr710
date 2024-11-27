@@ -94,10 +94,10 @@ lib_dep_names="ld-linux-aarch64.so.1"
 #${CROSS_COMPILE}readelf -a "${OUTDIR}/linux-stable/rootfs/"bin/busybox | grep "program interpreter"
 #${CROSS_COMPILE}readelf -a "${OUTDIR}/linux-stable/rootfs/"bin/busybox | grep "Shared library"
 
-cp $FINDER_APP_DIR/libm.so.6 "${OUTDIR}/rootfs/lib64/"
-cp $FINDER_APP_DIR/libc.so.6 "${OUTDIR}/rootfs/lib64/"
+cp $FINDER_APP_DIR/libm.so.6 "${OUTDIR}/rootfs/lib64/" 
+cp $FINDER_APP_DIR/libc.so.6 "${OUTDIR}/rootfs/lib64/" 
 cp $FINDER_APP_DIR/libresolv.so.2 "${OUTDIR}/rootfs/lib64/"
-cp $FINDER_APP_DIR/ld-linux-aarch64.so.1 "${OUTDIR}/rootfs/lib/"
+cp $FINDER_APP_DIR/ld-linux-aarch64.so.1 "${OUTDIR}/rootfs/lib/" && chown root:root "${OUTDIR}/rootfs/lib64/*"
 
 #THIS NO WORKY ON REMOTE HOST
 #IFS=','
@@ -157,10 +157,11 @@ sudo chmod +x ${OUTDIR}/rootfs/home/finder-test.sh
 sed -i 's;../conf/;conf/;g' ${OUTDIR}/rootfs/home/finder-test.sh
 sed -i 's;../conf/;conf/;g' ${OUTDIR}/rootfs/home/finder.sh
 # TODO: Chown the root directory
-#sudo chown -R root ${OUTDIR}/rootfs
+sudo chown -R root ${OUTDIR}/rootfs
 #sudo chmod -R 777 ${OUTDIR}/rootfs  #This is insecure. But security is not one of our objectives here.
 echo "find:"
 cd ${OUTDIR}/rootfs
+chown -R root:root ./* 
 find . | cpio -H newc -ov --owner=root:root > ${OUTDIR}/initramfs.cpio
 gzip -f ${OUTDIR}/initramfs.cpio
 # TODO: Create initramfs.cpio.gz
