@@ -104,9 +104,9 @@ done
 
 for name in $lib_dep_names
 do
-        f="$(find ${OUTDIR}/linux-stable -name ${name})" || echo "COULD NOT FIND ${name}"
+        f="$(find $FINDER_APP_DIR/linux-stable -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
         echo "f=$f"
-        cp $f "${OUTDIR}/rootfs/lib/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib"
+        cp $f "$FINDER_APP_DIR/rootfs/lib/" || echo "ERROR in copying $FINDER_APP_DIR $f to /rootfs/lib"
 
 done
 
@@ -116,7 +116,7 @@ sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
 sudo mknod -m 666 ${OUTDIR}/rootfs/dev/console c 5 1
 
 # TODO: Clean and build the writer utility
-pushd "/home/school/school-repository/finder-app" 
+cd "$FINDER_APP_DIR" 
 echo "cleaning writer util"
 make clean || echo "nothing to clean"
 make CROSS_COMPILE=aarch64-none-linux-gnu-
@@ -134,7 +134,7 @@ mkdir -p ${OUTDIR}/rootfs/home/conf
 echo "done full run section"
 #fi #full_run
 echo "MY PWD IS "$(pwd)""
-pushd $FINDER_APP_DIR
+cd $FINDER_APP_DIR
 #echo "/bin/sh" > ${OUTDIR}/rootfs/init
 #chmod 755 ${OUTDIR}/rootfs/init
 mkdir -p ${OUTDIR}/rootfs/home/conf
@@ -154,7 +154,7 @@ sed -i 's;../conf/;conf/;g' ${OUTDIR}/rootfs/home/finder.sh
 #sudo chown -R root ${OUTDIR}/rootfs
 #sudo chmod -R 777 ${OUTDIR}/rootfs  #This is insecure. But security is not one of our objectives here.
 echo "find:"
-pushd ${OUTDIR}/rootfs
+cd ${OUTDIR}/rootfs
 find . | cpio -H newc -ov --owner=root:root > ${OUTDIR}/initramfs.cpio
 gzip -f ${OUTDIR}/initramfs.cpio
 # TODO: Create initramfs.cpio.gz
