@@ -96,17 +96,17 @@ lib_dep_names="ld-linux-aarch64.so.1"
 IFS=','
 for name in $dep_names
 do
-	f="$(find ${OUTDIR}/linux-stable/ -name ${name})" || echo "COULD NOT FIND ${name}"
-	echo "f=$f"
+	f="$(find $FINDER_APP_DIR -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
+	echo "f_lib64=$f"
 	cp $f "${OUTDIR}/rootfs/lib64/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib64"
 
 done
 
 for name in $lib_dep_names
 do
-        f="$(find $FINDER_APP_DIR/linux-stable -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
-        echo "f=$f"
-        cp $f "$FINDER_APP_DIR/rootfs/lib/" || echo "ERROR in copying $FINDER_APP_DIR $f to /rootfs/lib"
+        f="$(find $FINDER_APP_DIR -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
+        echo "f_lib=$f"
+        cp $f "${OUTDIR}/rootfs/lib/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib/"
 
 done
 
@@ -126,7 +126,7 @@ cp writer ${OUTDIR}/rootfs/home/
 echo "HERE IS CHMOD"
 sudo chmod 755 ${OUTDIR}/rootfs/home/writer
 echo "HERE IS RESULT:""$(ls -ll ${OUTDIR}/rootfs/home/writer)"
-popd
+#popd
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
 mkdir -p ${OUTDIR}/rootfs/home/conf
@@ -138,14 +138,14 @@ cd $FINDER_APP_DIR
 #echo "/bin/sh" > ${OUTDIR}/rootfs/init
 #chmod 755 ${OUTDIR}/rootfs/init
 mkdir -p ${OUTDIR}/rootfs/home/conf
-cp ./finder.sh ${OUTDIR}/rootfs/home/
-cp ./autorun-qemu.sh ${OUTDIR}/rootfs/home/
+cp $FINDER_APP_DIR/finder.sh ${OUTDIR}/rootfs/home/
+cp $FINDER_APP_DIR/autorun-qemu.sh ${OUTDIR}/rootfs/home/
 chmod +x ${OUTDIR}/rootfs/home/autorun-qemu.sh
 sudo chmod +x ${OUTDIR}/rootfs/home/finder.sh
 sed -i 's;/bin/bash;/bin/sh;' ${OUTDIR}/rootfs/home/finder.sh
-cp ./conf/username.txt ${OUTDIR}/rootfs/home/conf/
-cp ./conf/assignment.txt ${OUTDIR}/rootfs/home/conf
-cp ./finder-test.sh  ${OUTDIR}/rootfs/home/
+cp $FINDER_APP_DIR/conf/username.txt ${OUTDIR}/rootfs/home/conf/
+cp $FINDER_APP_DIR/conf/assignment.txt ${OUTDIR}/rootfs/home/conf
+cp $FINDER_APP_DIR/finder-test.sh  ${OUTDIR}/rootfs/home/
 sed -i 's;/bin/bash;/bin/sh;g' ${OUTDIR}/rootfs/home/finder-test.sh
 sudo chmod +x ${OUTDIR}/rootfs/home/finder-test.sh
 sed -i 's;../conf/;conf/;g' ${OUTDIR}/rootfs/home/finder-test.sh
