@@ -93,22 +93,28 @@ dep_names="libm.so.6,libresolv.so.2,libc.so.6"
 lib_dep_names="ld-linux-aarch64.so.1"
 #${CROSS_COMPILE}readelf -a "${OUTDIR}/linux-stable/rootfs/"bin/busybox | grep "program interpreter"
 #${CROSS_COMPILE}readelf -a "${OUTDIR}/linux-stable/rootfs/"bin/busybox | grep "Shared library"
-IFS=','
-for name in $dep_names
-do
-	f="$(find $FINDER_APP_DIR -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
-	echo "f_lib64=$f"
-	cp $f "${OUTDIR}/rootfs/lib64/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib64"
 
-done
+cp $FINDER_APP_DIR/libm.so.6 "${OUTDIR}/rootfs/lib64/"
+cp $FINDER_APP_DIR/libc.so.6 "${OUTDIR}/rootfs/lib64/"
+cp $FINDER_APP_DIR/libresolv.so.2 "${OUTDIR}/rootfs/lib64/"
+cp $FINDER_APP_DIR/ld-linux-aarch64.so.1 "${OUTDIR}/rootfs/lib/"
 
-for name in $lib_dep_names
-do
-        f="$(find $FINDER_APP_DIR -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
-        echo "f_lib=$f"
-        cp $f "${OUTDIR}/rootfs/lib/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib/"
+#THIS NO WORKY ON REMOTE HOST
+#IFS=','
+#for name in $dep_names
+#do
+#	f="$(find $FINDER_APP_DIR -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
+#	echo "f_lib64=$f"
+#	cp $f "${OUTDIR}/rootfs/lib64/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib64"
+#
+#done
 
-done
+#for name in $lib_dep_names
+#do
+#        f="$(find $FINDER_APP_DIR -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
+#        echo "f_lib=$f"
+#        cp $f "${OUTDIR}/rootfs/lib/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib/"
+#done
 
 # TODO: Make device nodes
 echo "making device nodes..."
