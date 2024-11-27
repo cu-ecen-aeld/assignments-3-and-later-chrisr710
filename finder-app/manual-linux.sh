@@ -65,7 +65,7 @@ then
 fi
 
 # TODO: Create necessary base directories
-cd "$OUTDIR"
+cd "${OUTDIR}"
 list="bin,dev,etc,home,lib,lib64,proc,sbin,sys,tmp,usr,var,./usr/bin,./usr/lib,./usr/sbin,./var/log"
 IFS=','
 for dir in $list
@@ -97,7 +97,7 @@ lib_dep_names="ld-linux-aarch64.so.1"
 IFS=','
 for name in $dep_names
 do
-	f="$(find ${SYSROOT_DIR} -name ${name})" || echo "COULD NOT FIND ${name}"
+	f="$(find ${OUTDIR}/linux-stable/ -name ${name})" || echo "COULD NOT FIND ${name}"
 	echo "f=$f"
 	cp $f "${OUTDIR}/rootfs/lib64/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib64"
 
@@ -105,7 +105,7 @@ done
 
 for name in $lib_dep_names
 do
-        f="$(find ${SYSROOT_DIR} -name ${name})" || echo "COULD NOT FIND ${name}"
+        f="$(find ${OUTDIR}/linux-stable -name ${name})" || echo "COULD NOT FIND ${name}"
         echo "f=$f"
         cp $f "${OUTDIR}/rootfs/lib/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib"
 
