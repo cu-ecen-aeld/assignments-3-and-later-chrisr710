@@ -1,11 +1,10 @@
 #!/bin/bash
 # Script outline to install and build kernel.
 # Author: Siddhant Jajoo.
-
 set -e
 set -u
 full_run=1
-
+#fixed all
 
 OUTDIR=/tmp/aeld
 KERNEL_REPO=git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
