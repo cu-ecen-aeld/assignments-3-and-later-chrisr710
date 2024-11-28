@@ -64,19 +64,18 @@ then
 fi
 
 # TODO: Create necessary base directories
-cd "${OUTDIR}"
 list="bin,dev,etc,home,lib,lib64,proc,sbin,sys,tmp,usr,var,./usr/bin,./usr/lib,./usr/sbin,./var/log"
 IFS=','
 for dir in $list
 do
-[ -d ./rootfs/$dir ] || mkdir -p ./rootfs/$dir  
+[ -d ${OUTDIR}/rootfs/$dir ] || mkdir -p {$OUTDIR}/$dir  
 done
 
 if [ ! -d "${OUTDIR}/busybox" ]
 then
 
 git clone git://busybox.net/busybox.git
-    cd busybox
+    ${OUTDIR}/busybox
     git checkout ${BUSYBOX_VERSION}
     # TODO:  Configure busybox
 else
@@ -97,24 +96,14 @@ lib_dep_names="ld-linux-aarch64.so.1"
 cp $FINDER_APP_DIR/libm.so.6 "${OUTDIR}/rootfs/lib64/" 
 cp $FINDER_APP_DIR/libc.so.6 "${OUTDIR}/rootfs/lib64/" 
 cp $FINDER_APP_DIR/libresolv.so.2 "${OUTDIR}/rootfs/lib64/"
-cp $FINDER_APP_DIR/ld-linux-aarch64.so.1 "${OUTDIR}/rootfs/lib/" && chown root:root "${OUTDIR}/rootfs/lib64/*"
-
-#THIS NO WORKY ON REMOTE HOST
-#IFS=','
-#for name in $dep_names
-#do
-#	f="$(find $FINDER_APP_DIR -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
-#	echo "f_lib64=$f"
-#	cp $f "${OUTDIR}/rootfs/lib64/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib64"
-#
-#done
-
-#for name in $lib_dep_names
-#do
-#        f="$(find $FINDER_APP_DIR -name ${name})" || echo "COULD NOT FIND $FINDER_APP_DIR ${name}"
-#        echo "f_lib=$f"
-#        cp $f "${OUTDIR}/rootfs/lib/" || echo "ERROR in copying $f to ${OUTDIR}/rootfs/lib/"
-#done
+cp $FINDER_APP_DIR/ld-linux-aarch64.so.1 "${OUTDIR}/rootfs/lib/" 
+echo "HERE IS A LISTING OF ITEMS IN THE ROOTFS"
+echo "ls -lah ${OUTDIR}/rootfs/lib/"
+ls -lah "${OUTDIR}/rootfs/lib/" || echo "${OUTDIR}/rootfs/lib/ does not exist or is empty"
+echo "ls -lah ${OUTDIR}/rootfs/lib64/"
+ls -lah "${OUTDIR}/rootfs/lib64/" || echo "${OUTDIR}/rootfs/lib/ does not exist or is empty"
+chmod +x ${OUTDIR}/rootfs/lib64/* || echo "error with chmod on lib64"
+chmod +x ${OUTDIR}/rootfs/lib/* || echo "error with chmod on lib"
 
 # TODO: Make device nodes
 echo "making device nodes..."
@@ -136,8 +125,8 @@ echo "HERE IS RESULT:""$(ls -ll ${OUTDIR}/rootfs/home/writer)"
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
 mkdir -p ${OUTDIR}/rootfs/home/conf
-#sudo chmod -R 755 ${OUTDIR}/rootfs
-echo "done full run section"
+sudo chmod -R 755 ${OUTDIR}/rootfs || echo "issues with chmod -R 755 ${OUTDIR}/rootfs"
+sudo chown -R root:root ${OUTDIR}/rootfs || echo "issues with chown -R root:root ${OUTDIR}/rootfs"
 #fi #full_run
 echo "MY PWD IS "$(pwd)""
 cd $FINDER_APP_DIR
@@ -159,7 +148,6 @@ sed -i 's;../conf/;conf/;g' ${OUTDIR}/rootfs/home/finder.sh
 # TODO: Chown the root directory
 sudo chown -R root ${OUTDIR}/rootfs
 #sudo chmod -R 777 ${OUTDIR}/rootfs  #This is insecure. But security is not one of our objectives here.
-echo "find:"
 cd ${OUTDIR}/rootfs
 chown -R root:root ./* 
 find . | cpio -H newc -ov --owner=root:root > ${OUTDIR}/initramfs.cpio
