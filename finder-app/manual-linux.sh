@@ -68,7 +68,9 @@ list="bin,dev,etc,home,lib,lib64,proc,sbin,sys,tmp,usr,var,./usr/bin,./usr/lib,.
 IFS=','
 for dir in $list
 do
-[ -d ${OUTDIR}/rootfs/$dir ] || mkdir -p {$OUTDIR}/rootfs/$dir  
+[ -d ${OUTDIR}/rootfs/$dir ] || mkdir -p ${OUTDIR}/rootfs/$dir
+echo "made dir:"
+ls -lah ${OUTDIR}/rootfs/$dir || echo "failed to make dir ${OUTDIR}/rootfs/$dir"   
 done
 
 if [ ! -d "${OUTDIR}/busybox" ]
