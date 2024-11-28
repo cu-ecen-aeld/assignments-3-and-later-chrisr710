@@ -62,13 +62,13 @@ then
     echo "Deleting rootfs directory at ${OUTDIR}/rootfs and starting over"
     sudo rm -rf ${OUTDIR}/rootfs
 fi
-
+mkdir ${OUTDIR}/rootfs || echo "ROOTFS already exists"
 # TODO: Create necessary base directories
 list="bin,dev,etc,home,lib,lib64,proc,sbin,sys,tmp,usr,var,./usr/bin,./usr/lib,./usr/sbin,./var/log"
 IFS=','
 for dir in $list
 do
-[ -d ${OUTDIR}/rootfs/$dir ] || mkdir -p {$OUTDIR}/$dir  
+[ -d ${OUTDIR}/rootfs/$dir ] || mkdir -p {$OUTDIR}/rootfs/$dir  
 done
 
 if [ ! -d "${OUTDIR}/busybox" ]
@@ -93,10 +93,10 @@ lib_dep_names="ld-linux-aarch64.so.1"
 #${CROSS_COMPILE}readelf -a "${OUTDIR}/linux-stable/rootfs/"bin/busybox | grep "program interpreter"
 #${CROSS_COMPILE}readelf -a "${OUTDIR}/linux-stable/rootfs/"bin/busybox | grep "Shared library"
 
-cp $FINDER_APP_DIR/libm.so.6 "${OUTDIR}/rootfs/lib64/" 
-cp $FINDER_APP_DIR/libc.so.6 "${OUTDIR}/rootfs/lib64/" 
-cp $FINDER_APP_DIR/libresolv.so.2 "${OUTDIR}/rootfs/lib64/"
-cp $FINDER_APP_DIR/ld-linux-aarch64.so.1 "${OUTDIR}/rootfs/lib/" 
+cp $FINDER_APP_DIR/libm.so.6 ${OUTDIR}/rootfs/lib64/ 
+cp $FINDER_APP_DIR/libc.so.6 ${OUTDIR}/rootfs/lib64/ 
+cp $FINDER_APP_DIR/libresolv.so.2 ${OUTDIR}/rootfs/lib64/
+cp $FINDER_APP_DIR/ld-linux-aarch64.so.1 ${OUTDIR}/rootfs/lib/ 
 echo "HERE IS A LISTING OF ITEMS IN THE ROOTFS"
 echo "ls -lah ${OUTDIR}/rootfs/lib/"
 ls -lah "${OUTDIR}/rootfs/lib/" || echo "${OUTDIR}/rootfs/lib/ does not exist or is empty"
