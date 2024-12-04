@@ -75,6 +75,8 @@ do
 	$WRITER_PATH "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 
+FINDER_PATH="./finder.sh"
+[ ! -e "$FINDER_PATH" ] && FINDER_PATH="$(which finder.sh)"
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR") 
 echo "$OUTPUTSTRING" > /tmp/assignment-4-result.txt
 # remove temporary directories
