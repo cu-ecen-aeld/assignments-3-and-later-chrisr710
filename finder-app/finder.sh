@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 filesdir="$1"
 seearchstr="$2"
 if [ "$#" -ne "2" ]; then
