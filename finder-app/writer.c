@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 	if (argc != 3) {
 		printf("first argument is the full path to the file, including filename. Second argument is the string to write.\n");
 		return(1);	}
-	syslog(LOG_DEBUG,"Writing %s to %s",argv[2],argv[1]);
+	syslog(LOG_INFO,"Writing %s to %s",argv[2],argv[1]);
 	int success;
 	success=write_string_to_file(argv[2],argv[1]);
 	if (success == 0){
