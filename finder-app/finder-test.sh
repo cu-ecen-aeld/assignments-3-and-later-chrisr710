@@ -77,7 +77,7 @@ done
 
 FINDER_PATH="./finder.sh"
 [ ! -e "$FINDER_PATH" ] && FINDER_PATH="$(which finder.sh)"
-OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR") 
+OUTPUTSTRING=$($FINDER_PATH "$WRITEDIR" "$WRITESTR") 
 echo "$OUTPUTSTRING" > /tmp/assignment-4-result.txt
 # remove temporary directories
 rm -rf /tmp/aeld-data
