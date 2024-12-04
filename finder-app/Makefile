@@ -8,3 +8,6 @@ clean:
 install:
 	cp ./writer $(DEST_DIR) 
 	chmod +x $(DEST_DIR)writer
+
+all:
+	$(CROSS_COMPILE)gcc writer.c -o writer
