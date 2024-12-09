@@ -19,6 +19,7 @@
 char * outfile="/var/tmp/aesdsocketdata";
 bool is_working=false; 
 int parent_fd=0;
+int child_fd=0;
 char * curr_buff = NULL;
 int open_item=0;
 struct addrinfo *res; //this is the struct for setting up the socket
@@ -83,6 +84,7 @@ int dump_buffer_to_file(long length_to_dump, char * buffer){
 int connection_worker(int fd,long myproc, char * remote_ip_str){
 	if (myproc == 0){
 					close(parent_fd);
+					child_fd=fd;
 					am_parent=false;
 					printf("I am the child\n");
 					//close(s);//child doesn't need the original fd.
@@ -128,24 +130,26 @@ int connection_worker(int fd,long myproc, char * remote_ip_str){
 					close(fd);
 					free(buffer);
 					}
-			return;
+			return(0);
 	}
 			
 				
 	
 
 int open_socket(void){
-	int s; //fd for socket
+			int s; //fd for socket
 	
 			//here we set up a socket. CHILD should never run this.
 			
 			int s_accepted; //fd for socket accepted
 			struct addrinfo hints; //it is going to neeed the hints struct
+			syslog(LOG_INFO,"RUNNING MEMSET");
 			memset(&hints, 0, sizeof hints); // make sure the struct is empty
 			hints.ai_family = AF_INET; //ipv4
 			hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
 			hints.ai_flags = AI_PASSIVE; // fill in my IP for me
-			getaddrinfo("10.0.2.15","9000", &hints, &res); //this function sets up the res struct based on hints
+			syslog(LOG_INFO,"RUNNING GETADDR INFO");
+			getaddrinfo("127.0.0.1","9000", &hints, &res); //this function sets up the res struct based on hints
 			//res now contains an sock_addrin pointer at ai_addr
 			
 			struct sockaddr_in remote_addr; //this is where we will put the remote addr info
@@ -156,20 +160,33 @@ int open_socket(void){
 			parent_fd=s;
 			const int enable = 1;
 			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
+			syslog(LOG_INFO,"SET OPTS");
 			printf("binding\n");
+			
 			int binding_output=bind(s, res->ai_addr, res->ai_addrlen);
+			syslog(LOG_INFO,"BINDING FINISHED, output is %d",binding_output);
 			printf("Binding returned:%d\n",binding_output);
-			printf("listening\n");
+			if (binding_output != 0){syslog(LOG_INFO,"BINDING UNSUCCESSFUL");
+									syslog(LOG_INFO,"EXITING");
+									exit(-1);
+									}
+			
 			while (1){
+				printf("listening\n");
 				int listening_output=listen(s, 1);
+				syslog(LOG_INFO,"LISTENING FINISHED, returned %d",listening_output);
 				printf("Listening returned:%d\n",listening_output);
 				if (listening_output != 0){ 
 											printf("ERROR SETTING UP NEW CONNECTION\n");
 										printf("May be shutting down...\n");
 										exit(0);
 										}
-										
-				int new_connection = accept(s, &remote_addr, &addr_size); //will block here until it gets a new connection
+				int pid=fork();
+				if (pid!=0){
+							break;
+							}	
+					
+				int new_connection = accept(s, (struct sockaddr *)&remote_addr, &addr_size); //will block here until it gets a new connection
 				if (new_connection == 0){
 										printf("ERROR SETTING UP NEW CONNECTION\n");
 										printf("May be shutting down...\n");
@@ -187,7 +204,9 @@ int open_socket(void){
 	freeaddrinfo(res); // free the linked-list	
 	if (curr_buff != NULL){
 						free(curr_buff);
-	printf("EXITING FROM PROC\n");				}
+	printf("EXITING FROM PROC\n");				
+						}
+	
     exit(0); // Exit gracefully
 	}
 
@@ -199,20 +218,26 @@ int delete_file(void){
 void sigint_handler(int sig) {
 	//should_quit=true;
     printf("Caught signal\n");
-    syslog(LOG_INFO,"Caught signal, exiting");
+    syslog(LOG_INFO,"Caught signal");
+	if (sig == SIGINT){printf("SIGINT\n");}
+	if (sig == SIGTERM){printf("SIGTERM\n");}
 	should_quit=true;
 	close(parent_fd);
+	close(child_fd);
 	}
 
 
 
 
 int main(int argc, char * argv[]) {
+printf("MY SOCKET PROGRAM IS STARTING\n");
+syslog(LOG_INFO,"PROGRAM IS STARTING");
 openlog("aesdsocket", LOG_CONS | LOG_PID, LOG_USER);
-signal(SIGINT, sigint_handler);
-signal(SIGTERM, sigint_handler);
+//signal(SIGINT, sigint_handler);
+//signal(SIGTERM, sigint_handler);
 printf("starting...\n");
 delete_file();
+syslog(LOG_INFO,"OPENING SOCKET");
 open_socket();
 exit(0);
 }
