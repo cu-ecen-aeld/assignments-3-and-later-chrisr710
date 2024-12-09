@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <stdbool.h>
-//Make it run as a daemon, forked
 //make file opener, writeable, cleared on open
 char * outfile="/var/tmp/aesdsocketdata";
 bool is_working=false; 
