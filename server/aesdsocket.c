@@ -12,154 +12,208 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdlib.h>
-
+#include <signal.h>
+#include <stdbool.h>
 //Make it run as a daemon, forked
 //make file opener, writeable, cleared on open
+char * outfile="/var/tmp/aesdsocketdata";
+bool is_working=false; 
+int parent_fd=0;
+char * curr_buff = NULL;
+int open_item=0;
+struct addrinfo *res; //this is the struct for setting up the socket
+bool am_parent=true;
+bool should_quit=false;
+bool done_quitting=false;
 
 long find_delimter_position(char * buffer,long buffer_pos,long bytes_received_this_iteration){
 	printf("searching for delimiter starting at position: %ld\n",buffer_pos);
 	for (long i= buffer_pos; i<(buffer_pos + bytes_received_this_iteration); i++){
-		printf("looking for delimiter, found:%c\n",buffer[i]);
+		//printf("looking for delimiter, found:%c\n",buffer[i]);
 		if (buffer[i] == '\n'){
 			printf("found delimiter at %ld\n",i);
 			return(i);
 			}
 		}
-	return(0);
+	return(-1);
 	}
+
+int dump_file_to_socket(int socket_fd,long file_position){
+	is_working=true;
+	open_item=1;
+	printf("the filename I will read to send out data is:%s\n",outfile);
+	printf("sending up to %ld\n",file_position);
+	int file_buffer_size=100;
+	char * out_buffer[file_buffer_size];
+	int out_buffer_position;
+	int fd=open(outfile, O_RDONLY);
+	printf("FD for outfile=%d\n",fd);
+	if (fd < 1){
+		printf("ERROR OPENING OUTFILE TO READ\n");
+		}
+	long curr_file_offset=0;
+	int bytesRead=0;
+	while (1){
+			printf("Reading outfile, curr_bytes_read=%ld\n",curr_file_offset);
+			lseek(fd, curr_file_offset, SEEK_SET); //go to curr_offset point in the file...
+			int curr_bytes_read = read(fd, out_buffer, file_buffer_size); //read up to the size of the buffer into the buffer
+			if (curr_bytes_read > 0){
+				send(socket_fd,out_buffer,curr_bytes_read,0); //send up to the amount of bytes read from the buffer.
+				curr_file_offset+=curr_bytes_read;
+				}
+			else{close(fd);
+				is_working=false;
+				break;
+				}
+			}
+		return(0);
+	}
+
+int dump_buffer_to_file(long length_to_dump, char * buffer){
+	printf("opening %s for writing...\n",outfile);
+	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+	int fd=open(outfile,O_WRONLY | O_APPEND | O_CREAT,mode);
+	if (fd < 1){
+		printf("ERROR OPENING OUTFILE TO WRITE\n");
+		}
+	write(fd,buffer,length_to_dump);
+	close(fd);
+	}
+	
+int connection_worker(int fd,long myproc, char * remote_ip_str){
+	if (myproc == 0){
+					close(parent_fd);
+					am_parent=false;
+					printf("I am the child\n");
+					//close(s);//child doesn't need the original fd.
+					long buffer_init_size=10;
+					long buffer_size=buffer_init_size;
+					char * buffer = malloc(buffer_init_size);
+					curr_buff=buffer;
+					long buffer_position=0;
+					long bytes_received;
+					long end_address_of_completed_message=0;
+					long delimiter_position;
+					
+					while (1) {
+						//if (should_quit){printf("should quit, breaking\n");break;}
+						printf("receiving..., \n");
+						is_working=true;
+						open_item=2;
+						bytes_received=recv(fd,buffer,sizeof(buffer),0);
+						if (bytes_received <1){
+								is_working=false;
+								printf("connection closed; done\n");
+								syslog(LOG_INFO,"Closed connection from %s",remote_ip_str);
+								printf("got a hangup");
+								//should we print out the buffer here?
+								printf("exiting from socket worker\n");
+								exit(0);
+								}
+						//printf("DUMPING BUFF\n");
+						dump_buffer_to_file(bytes_received,buffer); //now however many bytes were received is dumped to file
+						printf("received bytes:%ld\n",bytes_received);
+						delimiter_position=find_delimter_position(buffer,0,bytes_received);
+						if (delimiter_position==-1){ //there is more to come
+							printf("The message in the buffer does not contain the delimiter\n");
+							bytes_received=0;
+							}
+						else{
+							//we have found the delimiter
+							printf("dumping file to socket\n");
+							dump_file_to_socket(fd,buffer_init_size);
+							}
+						}
+					printf("Socket worker exited the while loop.\n");
+					close(fd);
+					free(buffer);
+					}
+			return;
+	}
+			
+				
+	
 
 int open_socket(void){
-	//You’ll load this struct up a bit(struct addrinfo.), and then call getaddrinfo(). It’ll return a pointer to a new linked list of these structures 
-	//filled out with all the goodies you need.
-	//ai_addr field in the struct addrinfo is a pointer to a struct sockaddr. This is where we start getting into the nitty-gritty details of what’s inside an IP address structure.
-	//Anyway, the struct sockaddr holds socket address information for many types of sockets.
-	//To deal with struct sockaddr, programmers created a parallel structure: struct sockaddr_in (“in” for “Internet”) to be used with IPv4.
-	//And this is the important bit: a pointer to a struct sockaddr_in can be cast to a pointer to a struct sockaddr and vice-versa. So even though connect() wants a struct sockaddr*,
-	//you can still use a struct sockaddr_in and cast it at the last minute
 	int s; //fd for socket
-	int s_accepted; //fd for socket accepted
-	struct addrinfo hints; //it is going to neeed the hints struct
-	memset(&hints, 0, sizeof hints); // make sure the struct is empty
-	hints.ai_family = AF_INET; //ipv4
-    hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
-    hints.ai_flags = AI_PASSIVE; // fill in my IP for me
-	struct addrinfo *res; //this is the struct for setting up the socket
-	getaddrinfo("10.0.2.15","9000", &hints, &res); //this function sets up the res struct based on hints
-	//res now contains an sock_addrin pointer at ai_addr
 	
-	struct sockaddr_in remote_addr; //this is where we will put the remote addr info
-	socklen_t addr_size; //size of the address info struct above
-	addr_size = sizeof remote_addr;
-	
-	s = socket(res->ai_family, res->ai_socktype, res->ai_protocol); //create the socket file descriptor
-	const int enable = 1;
-	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
-	printf("binding\n");
-	int binding_output=123;
-	binding_output=bind(s, res->ai_addr, res->ai_addrlen);
-	printf("Binding returned:%d\n",binding_output);
-	printf("listening\n");
-	int is_listening=200;
-	is_listening=listen(s, 1000);
-	printf("Listening returned:%d\n",is_listening);
-	char remote_ip_str[100];
-	int new_connection;
-	new_connection = accept(s, &remote_addr, &addr_size);
-	inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str,addr_size );
-	printf("Received connection from: %s\n",remote_ip_str);
-	int myproc;
-	myproc=fork();
-	if (myproc == 0){
-		printf("I am the child\n");
-		close(s);//child doesn't need the original fd.
-		long buffer_init_size=10;
-		long buffer_size=buffer_init_size;
-		char * buffer = malloc(buffer_init_size);
-		long buffer_position=0;
-		long available_bytes_to_write=buffer_init_size - buffer_position;
-		long bytes_received;
-		long end_address_of_completed_message=0;
-		
-		while (1) {
+			//here we set up a socket. CHILD should never run this.
 			
-			printf("receiving..., available_bytes_to_write=%ld\n",available_bytes_to_write);
-			bytes_received=recv(new_connection,buffer + buffer_position,available_bytes_to_write,0);
-			if (bytes_received <1){
-					printf("connection closed; done\n");
-					//should we print out the buffer here?
-					return(1);
-					}
-			printf("received bytes:%ld\n",bytes_received);
-			//check for delimiter
+			int s_accepted; //fd for socket accepted
+			struct addrinfo hints; //it is going to neeed the hints struct
+			memset(&hints, 0, sizeof hints); // make sure the struct is empty
+			hints.ai_family = AF_INET; //ipv4
+			hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
+			hints.ai_flags = AI_PASSIVE; // fill in my IP for me
+			getaddrinfo("10.0.2.15","9000", &hints, &res); //this function sets up the res struct based on hints
+			//res now contains an sock_addrin pointer at ai_addr
 			
-			end_address_of_completed_message=find_delimter_position(buffer,buffer_position,bytes_received);
-			buffer_position+=bytes_received;
-			if (end_address_of_completed_message == 0){ //there is more to come
-			printf("The message in the buffer does not contain the delimiter\n");
+			struct sockaddr_in remote_addr; //this is where we will put the remote addr info
+			socklen_t addr_size; //size of the address info struct above
+			addr_size = sizeof remote_addr;
 			
-				if (buffer_position == buffer_size){
-					// we have filled up the buffer, but there is no delimiter. Expand buffer and receive more.
-						printf("filled up buffer, no delimiter. Expanding buffer size\n");
-						buffer_size+=buffer_init_size;
-						buffer = realloc(buffer, buffer_size);
-						available_bytes_to_write=buffer_init_size;
-						}
-				else	{
-						printf("Received data, no delimiter..\n");
-						
-						available_bytes_to_write-=bytes_received;
-						}
-				printf("buffer position: %ld\n",buffer_position);
-				printf("available bytes to write: %ld\n",available_bytes_to_write);
-				}
-						
-			//received completed mssg,	
-			else {
-				printf("end adress of completed message:%ld\n",end_address_of_completed_message);
-				printf("complete message received\n");
-				//Now sendit
-				send(new_connection,buffer,buffer_position,0);
-				for (long i=0;i<buffer_position;i++){
-					//printf("%c",buffer[i]);
-					
-					//printf("\n");
-				}
-				buffer_size=buffer_init_size;
-				buffer_position=0;
-				available_bytes_to_write=buffer_size;
-				buffer = realloc(buffer, buffer_size);
+			s = socket(res->ai_family, res->ai_socktype, res->ai_protocol); //create the socket file descriptor
+			parent_fd=s;
+			const int enable = 1;
+			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
+			printf("binding\n");
+			int binding_output=bind(s, res->ai_addr, res->ai_addrlen);
+			printf("Binding returned:%d\n",binding_output);
+			printf("listening\n");
+			while (1){
+				int listening_output=listen(s, 1);
+				printf("Listening returned:%d\n",listening_output);
+				if (listening_output != 0){ 
+											printf("ERROR SETTING UP NEW CONNECTION\n");
+										printf("May be shutting down...\n");
+										exit(0);
+										}
+										
+				int new_connection = accept(s, &remote_addr, &addr_size); //will block here until it gets a new connection
+				if (new_connection == 0){
+										printf("ERROR SETTING UP NEW CONNECTION\n");
+										printf("May be shutting down...\n");
+										exit(0);
+										}
+				char remote_ip_str[100];
+				inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str,addr_size );
+				printf("Received connection from: %s\n",remote_ip_str);
+				syslog(LOG_INFO,"Accepted connection from %s",remote_ip_str);
+				long new_proc=fork();
+				connection_worker(new_connection,new_proc,remote_ip_str);
 				
-				//return(0);
-				//break;
-				}
-			
-		}
+			}
+	close(s);
+	freeaddrinfo(res); // free the linked-list	
+	if (curr_buff != NULL){
+						free(curr_buff);
+	printf("EXITING FROM PROC\n");				}
+    exit(0); // Exit gracefully
 	}
-		
-	
-	else{
-	printf("I am the daddy, my child is %d\n",myproc);
-	}
-	freeaddrinfo(res); // free the linked-list
-	
-	return(0);
-}
 
-int initialize_file(const char * fname){
-	
-	
-	
-	
-}
+int delete_file(void){
+	int unlink_output=unlink (outfile); 
+	printf("removed file\n");
+	}
+
+void sigint_handler(int sig) {
+	//should_quit=true;
+    printf("Caught signal\n");
+    syslog(LOG_INFO,"Caught signal, exiting");
+	should_quit=true;
+	close(parent_fd);
+	}
 
 
 
 
 int main(int argc, char * argv[]) {
-printf("hello\n");
+openlog("aesdsocket", LOG_CONS | LOG_PID, LOG_USER);
+signal(SIGINT, sigint_handler);
+signal(SIGTERM, sigint_handler);
+printf("starting...\n");
+delete_file();
 open_socket();
-
-
-
+exit(0);
 }
 
