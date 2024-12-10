@@ -3,7 +3,7 @@
 case "$1" in 
 	start) 
 		echo "STARTING aesd socketserver!!!!!!!!!!" 
-		start-stop-daemon -S -n simpleserver -a /usr/bin/aesdsocket
+		start-stop-daemon -S -n aesdsocket -a /usr/bin/aesdsocket
 		;; 
 	stop) 
 		echo "STOPPING  aesd socketserver!!!!!!!!!!" 
