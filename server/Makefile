@@ -1,8 +1,8 @@
 aesdsocket: aesdsocket.c
-	$(CROSS_COMPILE)gcc aesdsocket.c -o ./aesdsocket
+	$(CC)aesdsocket.c -o ./aesdsocket
 
 clean:
-	-rm ./aesdsocket 
+	-rm $(DEST_DIR)aesdsocket 
 
 install:
 	cp ./aesdsocket $(DEST_DIR) 
@@ -13,6 +13,5 @@ all:
 	chmod +x ./aesdsocket
 
 default:
-	$(CC) aesdsocket.c -o /tmp/aesdsocket
-	touch /tmp/hello
+	$(CC) aesdsocket.c -o ./aesdsocket
 	
