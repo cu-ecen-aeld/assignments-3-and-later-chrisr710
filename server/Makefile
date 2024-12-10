@@ -9,7 +9,7 @@ install:
 	chmod +x $(DEST_DIR)aesdsocket
 
 all:
-	$(CC)gcc aesdsocket.c -o ./aesdsocket
+	$(CC) aesdsocket.c -o ./aesdsocket
 	chmod +x ./aesdsocket
 
 default:
