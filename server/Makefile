@@ -9,9 +9,10 @@ install:
 	chmod +x $(DEST_DIR)aesdsocket
 
 all:
-	$(CROSS_COMPILE)gcc aesdsocket.c -o ./aesdsocket
+	$(CC)gcc aesdsocket.c -o ./aesdsocket
 	chmod +x ./aesdsocket
 
 default:
-	$(CROSS_COMPILE)gcc aesdsocket.c -o ./aesdsocket
+	$(CC) aesdsocket.c -o /tmp/aesdsocket
+	touch /tmp/hello
 	
