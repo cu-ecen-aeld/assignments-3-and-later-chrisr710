@@ -97,7 +97,12 @@ int connection_worker(int fd,long myproc, char * remote_ip_str){
 					long delimiter_position;
 					
 					while (1) {
-						//if (should_quit){printf("should quit, breaking\n");break;}
+						if (should_quit){printf("should quit, breaking\n");
+										
+										break;
+										close(fd);
+										free(buffer);
+										}
 						printf("receiving..., \n");
 						is_working=true;
 						open_item=2;
@@ -110,6 +115,7 @@ int connection_worker(int fd,long myproc, char * remote_ip_str){
 								//should we print out the buffer here?
 								printf("exiting from socket worker\n");
 								close(fd);
+								free(buffer);
 								return(0);
 								}
 						//printf("DUMPING BUFF\n");
@@ -127,8 +133,8 @@ int connection_worker(int fd,long myproc, char * remote_ip_str){
 							}
 						}
 					printf("Socket worker exited the while loop.\n");
-					//close(fd);
-					//free(buffer);
+					close(fd);
+					free(buffer);
 					}
 			return(0);
 	}
@@ -228,7 +234,7 @@ void sigint_handler(int sig) {
 	if (sig == SIGTERM){printf("SIGTERM\n");}
 	should_quit=true;
 	close(parent_fd);
-	close(child_fd);
+	//close(child_fd);
 	}
 
 
