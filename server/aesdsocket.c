@@ -82,7 +82,7 @@ int dump_buffer_to_file(long length_to_dump, char * buffer){
 	
 int connection_worker(int fd,long myproc, char * remote_ip_str){
 	if (myproc == 0){
-					close(parent_fd);
+					//close(parent_fd);
 					child_fd=fd;
 					am_parent=false;
 					printf("I am the child\n");
@@ -109,7 +109,8 @@ int connection_worker(int fd,long myproc, char * remote_ip_str){
 								printf("got a hangup");
 								//should we print out the buffer here?
 								printf("exiting from socket worker\n");
-								exit(0);
+								close(fd);
+								return(0);
 								}
 						//printf("DUMPING BUFF\n");
 						dump_buffer_to_file(bytes_received,buffer); //now however many bytes were received is dumped to file
@@ -126,8 +127,8 @@ int connection_worker(int fd,long myproc, char * remote_ip_str){
 							}
 						}
 					printf("Socket worker exited the while loop.\n");
-					close(fd);
-					free(buffer);
+					//close(fd);
+					//free(buffer);
 					}
 			return(0);
 	}
@@ -169,37 +170,42 @@ int open_socket(void){
 									syslog(LOG_INFO,"EXITING");
 									exit(-1);
 									}
+			printf("listening\n");
 			
-			while (1){
-				printf("listening\n");
-				int listening_output=listen(s, 1);
+			int pid=fork();
+			if (pid!=0){return(0);}
+			int listening_output=listen(s, 1);
 				syslog(LOG_INFO,"LISTENING FINISHED, returned %d",listening_output);
 				printf("Listening returned:%d\n",listening_output);
 				if (listening_output != 0){ 
-											printf("ERROR SETTING UP NEW CONNECTION\n");
+										printf("ERROR SETTING UP NEW CONNECTION\n");
 										printf("May be shutting down...\n");
 										exit(0);
-										}
-				int pid=fork();
+										}	
+			int new_connection;
+			while (1){
+				
+				
 				if (pid!=0){
 							break;
 							}	
-					
-				int new_connection = accept(s, (struct sockaddr *)&remote_addr, &addr_size); //will block here until it gets a new connection
+				
+				new_connection = accept(s, (struct sockaddr *)&remote_addr, &addr_size); //will block here until it gets a new connection
 				if (new_connection == 0){
 										printf("ERROR SETTING UP NEW CONNECTION\n");
 										printf("May be shutting down...\n");
 										exit(0);
 										}
+				printf("New Connection Returned %d\n",new_connection);
 				char remote_ip_str[100];
 				inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str,addr_size );
 				printf("Received connection from: %s\n",remote_ip_str);
 				syslog(LOG_INFO,"Accepted connection from %s",remote_ip_str);
-				long new_proc=fork();
-				connection_worker(new_connection,new_proc,remote_ip_str);
+				//long new_proc=fork();
+				connection_worker(new_connection,pid,remote_ip_str);
 				
 			}
-	close(s);
+	//close(s);
 	freeaddrinfo(res); // free the linked-list	
 	if (curr_buff != NULL){
 						free(curr_buff);
