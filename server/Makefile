@@ -1,5 +1,5 @@
 aesdsocket: aesdsocket.c
-	$(CC)aesdsocket.c -o ./aesdsocket
+	$(CC) aesdsocket.c -o ./aesdsocket
 
 clean:
 	-rm $(DEST_DIR)aesdsocket 
