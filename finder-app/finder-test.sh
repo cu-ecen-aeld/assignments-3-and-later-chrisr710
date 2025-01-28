@@ -8,7 +8,17 @@ set -u
 NUMFILES=10
 WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
-username=$(cat conf/username.txt)
+#username=$(cat conf/username.txt)
+running_remote=0
+
+[ "$(pwd)" != "/home/school/school-repository/finder-app" ] && running_remote=1
+if [ "$running_remote" -eq "0" ]
+	then
+		username=$(cat conf/username.txt)
+	else
+		username=$(cat /etc/finder-app/conf/username.txt)
+fi
+	
 
 if [ $# -lt 3 ]
 then
@@ -32,7 +42,12 @@ echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 rm -rf "${WRITEDIR}"
 
 # create $WRITEDIR if not assignment1
-assignment=`cat ../conf/assignment.txt`
+if [ $running_remote -eq "0" ]
+	then
+	assignment=`cat ../conf/assignment.txt`
+	else
+	assignment=`cat /etc/finder-app/conf/assignment.txt`
+fi
 
 if [ $assignment != 'assignment1' ]
 then
@@ -52,13 +67,18 @@ fi
 #make clean
 #make
 
+WRITER_PATH="./writer"
+[ ! -e "$WRITER_PATH" ] && WRITER_PATH="$(which writer)"
+echo "WRITER_PATH =""$WRITER_PATH"
 for i in $( seq 1 $NUMFILES)
 do
-	./writer.sh "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+	$WRITER_PATH "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 
-OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
-
+FINDER_PATH="./finder.sh"
+[ ! -e "$FINDER_PATH" ] && FINDER_PATH="$(which finder.sh)"
+OUTPUTSTRING=$($FINDER_PATH "$WRITEDIR" "$WRITESTR") 
+echo "$OUTPUTSTRING" > /tmp/assignment-4-result.txt
 # remove temporary directories
 rm -rf /tmp/aeld-data
 
