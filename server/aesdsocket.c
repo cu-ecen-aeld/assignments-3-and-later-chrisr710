@@ -211,7 +211,7 @@ void * connection_worker(void * arg){
 					//printf("string being recorded: %s\n\n",instring);
 					
 					dump_buffer_to_file(total_bytes_received,buffer); //now however many bytes were received is dumped to file
-					///printf("dumping file to socket\n");
+					////printf("dumping file to socket\n");
 					dump_file_to_socket(fd);
 					
 					//cleanup and wait for more, or close connection?
