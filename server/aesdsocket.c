@@ -26,6 +26,7 @@
 
 bool close_socket_when_receive_delim=false;
 char * outfile="/var/tmp/aesdsocketdata";
+
 //Socket Vars Used Later
 struct addrinfo *res; //this is the struct for setting up the socket
 int parent_fd; //the fd of the socket before we accept connections
