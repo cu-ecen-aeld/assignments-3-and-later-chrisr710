@@ -23,6 +23,7 @@
 #define TIME_SIZE 70
 #include <time.h>
 #include <sys/time.h>
+
 bool close_socket_when_receive_delim=false;
 char * outfile="/var/tmp/aesdsocketdata";
 //Socket Vars Used Later
