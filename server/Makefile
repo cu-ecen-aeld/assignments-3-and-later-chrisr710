@@ -1,5 +1,11 @@
+CC ?= $(CROSS_COMPILE)gcc
+CFLAGS ?= -g -Wall -Werror
+TARGET ?= aesdsocket
+LDFLAGS ?= lpthread -lrt
+
+
 aesdsocket: aesdsocket.c
-	$(CC) aesdsocket.c -o ./aesdsocket
+	$(CC) $(CFLAGS)  aesdsocket.c -o ./aesdsocket
 
 clean:
 	-rm $(DEST_DIR)aesdsocket 
