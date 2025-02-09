@@ -236,7 +236,7 @@ void * connection_worker(void * arg){
 	
 				
 	}	
-	//printf("Socket worker exited the while loop.\n");
+	printf("Socket worker exited the while loop. Closing %d\n",fd);
 	close(fd);
 	free(buffer);
 	return(0);	
