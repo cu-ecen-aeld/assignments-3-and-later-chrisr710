@@ -1,5 +1,11 @@
+CC ?=($CROSS_COMPILE)gcc
+CFLAGS ?= -g -Wall -Werror
+TARGET ?= aesdsocket
+LDFLAGS ?= -lpthread -lrt
+#$@ The file name of the target of the rule
+
 aesdsocket: aesdsocket.c
-	$(CC) aesdsocket.c -o ./aesdsocket
+	$(CC) $(CFLAGS) $^ -o $@ $(INCLUDES) $(LDFLAGS) 
 
 clean:
 	-rm $(DEST_DIR)aesdsocket 
