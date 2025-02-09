@@ -35,7 +35,7 @@ bool should_quit=false; //when this is set to true, the loops stop.
 pthread_mutex_t linked_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int get_current_time(char *curr_time){
+void get_current_time(char *curr_time){
 	//rfc2822: 01 Jun 2016 14:31:46 -0700
 	//printf("getting the current time\n");
 	time_t rawtime;
@@ -45,6 +45,7 @@ int get_current_time(char *curr_time){
 	//printf("size of chars:%ld\n",sizeof(curr_time));
 	strftime(curr_time,TIME_SIZE,"%a, %d %b %Y %T %z",timeinfo);
 	//printf("CURR TIME IN FUNCTION:%s\n",curr_time);
+	
 }
 
 void print_time_to_file() {
@@ -73,7 +74,7 @@ void print_time_to_file() {
 }
 	
 
-int dump_buffer_to_file(long length_to_dump, char * buffer){
+void dump_buffer_to_file(long length_to_dump, char * buffer){
 	//printf("dumping buffer to file\n");
 	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 	pthread_mutex_lock(&file_mutex);
@@ -105,12 +106,12 @@ long find_delimter_position(char * buffer,long buffer_pos,long bytes_received_th
 	}
 
 int dump_file_to_socket(int socket_fd){
-	bool is_working=true;
-	int open_item=1;
+	
+	
 	////printf("the filename I will read to send out data is:%s\n",outfile);
 	int file_buffer_size=100;
 	char * out_buffer[file_buffer_size];
-	int out_buffer_position;
+	
 	pthread_mutex_lock(&file_mutex);
 	//printf("FILE IS LOCKED\n");
 	int fd=open(outfile, O_RDONLY);
@@ -120,7 +121,7 @@ int dump_file_to_socket(int socket_fd){
 		pthread_mutex_unlock(&file_mutex);
 		}
 	long curr_file_offset=0;
-	int bytesRead=0;
+	
 	while (1){
 			////printf("Reading outfile, curr_bytes_read=%ld\n",curr_file_offset);
 			lseek(fd, curr_file_offset, SEEK_SET); //go to curr_offset point in the file...
@@ -130,7 +131,7 @@ int dump_file_to_socket(int socket_fd){
 				curr_file_offset+=curr_bytes_read;
 				}
 			else{close(fd);
-				is_working=false;
+				
 				pthread_mutex_unlock(&file_mutex);
 				//printf("FILE IS UNLOCKED\n");
 				break;
@@ -150,12 +151,12 @@ void * connection_worker(void * arg){
 	
 	char * buffer = malloc(BUFFER_SIZE);
 	int buffer_size=BUFFER_SIZE;
-	int buffer_available=BUFFER_SIZE;
+	//int buffer_available=BUFFER_SIZE;
 	int available_buffer=BUFFER_SIZE;
 	int total_bytes_received=0;
 	long buffer_position=0;
 	long bytes_received;
-	long end_address_of_completed_message=0;
+	//long end_address_of_completed_message=0;
 	long delimiter_position;
 	struct connection_worker_params *f=(struct connection_worker_params *) arg;
 	int fd=f->fd;
@@ -202,14 +203,14 @@ void * connection_worker(void * arg){
 				else{
 					//we have found the delimiter
 					//printf("delimiter received, dumping buffer to file\n");
-					char instring[500];
-					int x=0;
+					//char instring[500];
+					//int x=0;
 					//printf("BYTES RECEIVED HERE IS:%ld\n",bytes_received);
-					for (x; x<bytes_received;x++ ){
-						instring[x]=buffer[x];
+					//for (x; x<bytes_received;x++ ){
+					//	instring[x]=buffer[x];
 						////printf("adding %c to instring\n",buffer[x]);
-					}
-					instring[x+1]='\0';
+					//}
+					//instring[x+1]='\0';
 					//printf("string being recorded: %s\n\n",instring);
 					
 					dump_buffer_to_file(total_bytes_received,buffer); //now however many bytes were received is dumped to file
@@ -257,7 +258,7 @@ typedef struct node{
 typedef TAILQ_HEAD(head_s, node) head_t;
 head_t head;
 
-int create_node(int fd, char *remote_ip){
+void create_node(int fd, char *remote_ip){
 	pthread_mutex_lock(&linked_list_mutex);
 	////printf("Address of head passed to create node %p\n",arg);
 	//head_t myhead=*(head_t*) arg; //we received a pointer, therefore we dereference the whole thing (first *), and we correctly cast arg as a pointer (second *)
@@ -282,7 +283,7 @@ int create_node(int fd, char *remote_ip){
 	
 	}
 
-int cleanup(void) {
+void cleanup(void) {
 	//printf("running cleanup\n");
 	struct node * e = NULL;
 	//printf("joining threads\n");
@@ -308,7 +309,7 @@ int cleanup(void) {
 
 
 
-int open_socket(void){
+void open_socket(void){
 			struct addrinfo hints; //it is going to neeed the hints struct
 			syslog(LOG_INFO,"RUNNING MEMSET");
 			memset(&hints, 0, sizeof hints); // make sure the struct is empty
@@ -364,7 +365,7 @@ int open_socket(void){
 			}
 	}
 
-int delete_file(void){
+void delete_file(void){
 	int unlink_output=unlink (outfile); 
 	////printf("removed file\n");
 	}
@@ -397,7 +398,7 @@ int main(){
     }
 	
 	open_socket();
-
+	return(0);
     
 
 
