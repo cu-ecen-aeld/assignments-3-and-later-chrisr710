@@ -15,9 +15,9 @@ install:
 	chmod +x $(DEST_DIR)aesdsocket
 
 all:
-	$(CC) aesdsocket.c -o ./aesdsocket
+	$(CC) $(CFLAGS) aesdsocket.c -o aesdsocket $(INCLUDES) $(LDFLAGS) 
 	chmod +x ./aesdsocket
 
 default:
-	$(CC) aesdsocket.c -o ./aesdsocket
+	$(CC) $(CFLAGS) aesdsocket.c -o aesdsocket $(INCLUDES) $(LDFLAGS) 
 	
