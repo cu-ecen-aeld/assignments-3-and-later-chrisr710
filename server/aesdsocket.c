@@ -317,7 +317,7 @@ void open_socket(void){
 			hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
 			hints.ai_flags = AI_PASSIVE; // fill in my IP for me
 			syslog(LOG_INFO,"RUNNING GETADDR INFO");
-			getaddrinfo("127.0.0.1","9000", &hints, &res); //this function sets up the res struct based on hints
+			getaddrinfo("0.0.0.0","9000", &hints, &res); //this function sets up the res struct based on hints
 			parent_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol); //create the socket file descriptor
 			//printf("Parent fd:%d\n",parent_fd);
 			const int enable = 1;
