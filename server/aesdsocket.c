@@ -236,7 +236,7 @@ void * connection_worker(void * arg){
 	
 				
 	}	
-	printf("Socket worker exited the while loop. Closing %d\n",fd);
+	//printf("Socket worker exited the while loop. Closing %d\n",fd);
 	close(fd);
 	free(buffer);
 	return(0);	
@@ -258,7 +258,7 @@ typedef TAILQ_HEAD(head_s, node) head_t;
 head_t head;
 
 void create_node(int fd, char *remote_ip){
-	printf("creating node\n");
+	//printf("creating node\n");
 	pthread_mutex_lock(&linked_list_mutex);
 	//linkded_list_initialized=true;
 	////printf("Address of head passed to create node %p\n",arg);
@@ -292,9 +292,9 @@ void cleanup(void) {
 	pthread_mutex_lock(&linked_list_mutex);
 	TAILQ_FOREACH(e, &head, nodes)
 	{
-		printf("thread id %d\n", e->id);
+		//printf("thread id %d\n", e->id);
 		pthread_join(e->mythread,NULL);
-		printf("closing fd %d\n",e->fd);
+		//printf("closing fd %d\n",e->fd);
 		close(e->fd);
 	}
 	printf("closing parent: %d\n",parent_fd);
@@ -342,6 +342,8 @@ void open_socket(void){
 									syslog(LOG_INFO,"EXITING");
 									exit(-1);
 									}
+			int newproc=fork();
+			if (newproc != 0){exit(0);}
 			
 			struct itimerval timer;
 			// Set the signal handler
