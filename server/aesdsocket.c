@@ -48,11 +48,11 @@ void get_current_time(char *curr_time){
 }
 
 void print_time_to_file() {
+	pthread_mutex_lock(&file_mutex);
 	char * writestr=malloc(TIME_SIZE + 10);
 	char * prefix="timestamp:";
 	for (int i=0;i<10;i++)
         {writestr[i]=prefix[i];}
-	pthread_mutex_lock(&file_mutex);
 	//printf("FILE IS LOCKED\n");
 	get_current_time(&writestr[10]);
 	//printf("WRITESTR:%s\n",writestr);
@@ -169,7 +169,7 @@ void * connection_worker(void * arg){
 	pthread_mutex_unlock(&linked_list_mutex);
 	while (1) {		
 				if(should_quit){
-					//printf("Listening socket closed because of signal interrupt\n");
+					printf("Listening socket closed because of signal interrupt\n");
 					close(fd);
 				}
 				//printf("Socket for id %d receiving up to %d bytes\n",f->id,available_buffer);
@@ -178,7 +178,7 @@ void * connection_worker(void * arg){
 				if (bytes_received < 1){
 										////printf("connection closed; done\n");
 										syslog(LOG_INFO,"Closed connection from %s",remote_ip_str);
-										//printf("got a hangup\n");
+										printf("got a hangup\n");
 										break;
 				}
 				total_bytes_received= total_bytes_received+bytes_received;
