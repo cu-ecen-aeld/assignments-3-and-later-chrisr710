@@ -24,7 +24,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-bool close_socket_when_receive_delim=true;
+bool close_socket_when_receive_delim=false;
 char * outfile="/var/tmp/aesdsocketdata";
 //Socket Vars Used Later
 struct addrinfo *res; //this is the struct for setting up the socket
@@ -163,7 +163,7 @@ void * connection_worker(void * arg){
 	////printf("THe configured remote ip address:%s\n",f->ip_addr);
 	strcpy(remote_ip_str,f->ip_addr);
 	//char *remote_ip_str=f->ip_addr;
-	printf("remote ip:%s\n",remote_ip_str);
+	////printf("remote ip:%s\n",remote_ip_str);
 	syslog(LOG_INFO,"Accepted connection from %s",remote_ip_str);
 	//printf("NEW CONNECTION!\n");
 	pthread_mutex_unlock(&linked_list_mutex);
@@ -182,7 +182,7 @@ void * connection_worker(void * arg){
 										break;
 				}
 				total_bytes_received= total_bytes_received+bytes_received;
-				printf("fd: %d total bytes received:%d%d\n",fd,total_bytes_received);
+				//printf("total bytes received:%d\n",total_bytes_received);
 				//find_delimter_position(char * buffer,long buffer_pos,long bytes_received_this_iteration)
 				delimiter_position=find_delimter_position(buffer,buffer_position,bytes_received);
 				if (delimiter_position==-1){ //there is more to come
@@ -191,7 +191,7 @@ void * connection_worker(void * arg){
 					buffer_position=buffer_position+bytes_received;
 					available_buffer=buffer_size-bytes_received;
 					if (buffer_position==buffer_size){  //we have filled the buffer but did not find delimiter yet
-						printf("reallocating buffer\n");
+						//printf("reallocating buffer\n");
 						char*newptr;
 						newptr = realloc(buffer,buffer_size+BUFFER_SIZE);
 						buffer=newptr;
@@ -201,7 +201,7 @@ void * connection_worker(void * arg){
 				}
 				else{
 					//we have found the delimiter
-					printf("delimiter received, dumping buffer to file, fd=%d\n",fd);
+					//printf("delimiter received, dumping buffer to file\n");
 					//char instring[500];
 					//int x=0;
 					//printf("BYTES RECEIVED HERE IS:%ld\n",bytes_received);
@@ -217,8 +217,8 @@ void * connection_worker(void * arg){
 					dump_file_to_socket(fd);
 					
 					//cleanup and wait for more, or close connection?
-					if (! close_socket_when_receive_delim){
-						printf("looping for more data from fd %d\n",fd);
+					if (!close_socket_when_receive_delim){
+						printf("continuing to listen on connection for fd %d\n",fd):
 						char * pointer = realloc(buffer,BUFFER_SIZE);
 						buffer=pointer;
 						total_bytes_received=0;
@@ -237,7 +237,7 @@ void * connection_worker(void * arg){
 	
 				
 	}	
-	printf("Socket worker exited the while loop. Closing %d\n",fd);
+	//printf("Socket worker exited the while loop. Closing %d\n",fd);
 	close(fd);
 	free(buffer);
 	return(0);	
@@ -259,7 +259,7 @@ typedef TAILQ_HEAD(head_s, node) head_t;
 head_t head;
 
 void create_node(int fd, char *remote_ip){
-	printf("creating node\n");
+	//printf("creating node\n");
 	pthread_mutex_lock(&linked_list_mutex);
 	//linkded_list_initialized=true;
 	////printf("Address of head passed to create node %p\n",arg);
@@ -278,7 +278,7 @@ void create_node(int fd, char *remote_ip){
 	e->id=thread_id_counter;
 	e->mythread_returnval=pthread_create(&e->mythread, NULL, &connection_worker,&f);
 	//e->c = string[c];
-    	TAILQ_INSERT_TAIL(&head, e, nodes); 
+    TAILQ_INSERT_TAIL(&head, e, nodes); 
 	////printf("Address of head %p\n",myhead);
 	////printf("inserted\n");
     //e = NULL;
