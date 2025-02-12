@@ -259,7 +259,7 @@ typedef TAILQ_HEAD(head_s, node) head_t;
 head_t head;
 
 void create_node(int fd, char *remote_ip){
-	//printf("creating node\n");
+	printf("creating node\n");
 	pthread_mutex_lock(&linked_list_mutex);
 	//linkded_list_initialized=true;
 	////printf("Address of head passed to create node %p\n",arg);
@@ -278,7 +278,7 @@ void create_node(int fd, char *remote_ip){
 	e->id=thread_id_counter;
 	e->mythread_returnval=pthread_create(&e->mythread, NULL, &connection_worker,&f);
 	//e->c = string[c];
-    TAILQ_INSERT_TAIL(&head, e, nodes); 
+    	TAILQ_INSERT_TAIL(&head, e, nodes); 
 	////printf("Address of head %p\n",myhead);
 	////printf("inserted\n");
     //e = NULL;
