@@ -201,7 +201,7 @@ void * connection_worker(void * arg){
 				}
 				else{
 					//we have found the delimiter
-					printf("delimiter received, dumping buffer to file\n");
+					printf("delimiter received, dumping buffer to file, fd=%d\n",fd);
 					//char instring[500];
 					//int x=0;
 					//printf("BYTES RECEIVED HERE IS:%ld\n",bytes_received);
@@ -217,7 +217,7 @@ void * connection_worker(void * arg){
 					dump_file_to_socket(fd);
 					
 					//cleanup and wait for more, or close connection?
-					if (!close_socket_when_receive_delim){
+					if (! close_socket_when_receive_delim){
 						printf("looping for more data from fd %d\n",fd);
 						char * pointer = realloc(buffer,BUFFER_SIZE);
 						buffer=pointer;
@@ -237,7 +237,7 @@ void * connection_worker(void * arg){
 	
 				
 	}	
-	//printf("Socket worker exited the while loop. Closing %d\n",fd);
+	printf("Socket worker exited the while loop. Closing %d\n",fd);
 	close(fd);
 	free(buffer);
 	return(0);	
