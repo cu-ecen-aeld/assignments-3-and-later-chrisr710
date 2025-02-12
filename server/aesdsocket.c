@@ -24,7 +24,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-bool close_socket_when_receive_delim=false;
+bool close_socket_when_receive_delim=true;
 char * outfile="/var/tmp/aesdsocketdata";
 //Socket Vars Used Later
 struct addrinfo *res; //this is the struct for setting up the socket
@@ -286,10 +286,10 @@ void create_node(int fd, char *remote_ip){
 
 void cleanup(void) {
 	printf("running cleanup\n");
-
+	pthread_mutex_lock(&linked_list_mutex);
 	struct node * e = NULL;
 	printf("joining threads\n");
-	pthread_mutex_lock(&linked_list_mutex);
+	
 	TAILQ_FOREACH(e, &head, nodes)
 	{
 		//printf("thread id %d\n", e->id);
@@ -323,7 +323,7 @@ void open_socket(void){
 			hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
 			hints.ai_flags = AI_PASSIVE; // fill in my IP for me
 			syslog(LOG_INFO,"RUNNING GETADDR INFO");
-			getaddrinfo("10.0.2.15","9000", &hints, &res); //this function sets up the res struct based on hints
+			getaddrinfo("0.0.0.0","9000", &hints, &res); //this function sets up the res struct based on hints
 			parent_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol); //create the socket file descriptor
 			//printf("Parent fd:%d\n",parent_fd);
 			if (parent_fd <1){
