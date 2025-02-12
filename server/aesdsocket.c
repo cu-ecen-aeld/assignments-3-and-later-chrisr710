@@ -26,12 +26,12 @@
 
 bool close_socket_when_receive_delim=false;
 char * outfile="/var/tmp/aesdsocketdata";
-
 //Socket Vars Used Later
 struct addrinfo *res; //this is the struct for setting up the socket
 int parent_fd; //the fd of the socket before we accept connections
 int thread_id_counter=0; //this is so each new thread gets a nice number.
 bool should_quit=false; //when this is set to true, the loops stop.
+//bool linkded_list_initialized=false;
 pthread_mutex_t linked_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -45,7 +45,6 @@ void get_current_time(char *curr_time){
 	//printf("size of chars:%ld\n",sizeof(curr_time));
 	strftime(curr_time,TIME_SIZE,"%a, %d %b %Y %T %z",timeinfo);
 	//printf("CURR TIME IN FUNCTION:%s\n",curr_time);
-	
 }
 
 void print_time_to_file() {
@@ -106,12 +105,12 @@ long find_delimter_position(char * buffer,long buffer_pos,long bytes_received_th
 	}
 
 int dump_file_to_socket(int socket_fd){
-	
-	
+	//bool is_working=true;
+	//int open_item=1;
 	////printf("the filename I will read to send out data is:%s\n",outfile);
 	int file_buffer_size=100;
 	char * out_buffer[file_buffer_size];
-	
+	//int out_buffer_position;
 	pthread_mutex_lock(&file_mutex);
 	//printf("FILE IS LOCKED\n");
 	int fd=open(outfile, O_RDONLY);
@@ -121,7 +120,7 @@ int dump_file_to_socket(int socket_fd){
 		pthread_mutex_unlock(&file_mutex);
 		}
 	long curr_file_offset=0;
-	
+	//int bytesRead=0;
 	while (1){
 			////printf("Reading outfile, curr_bytes_read=%ld\n",curr_file_offset);
 			lseek(fd, curr_file_offset, SEEK_SET); //go to curr_offset point in the file...
@@ -131,7 +130,7 @@ int dump_file_to_socket(int socket_fd){
 				curr_file_offset+=curr_bytes_read;
 				}
 			else{close(fd);
-				
+				//is_working=false;
 				pthread_mutex_unlock(&file_mutex);
 				//printf("FILE IS UNLOCKED\n");
 				break;
@@ -237,10 +236,10 @@ void * connection_worker(void * arg){
 	
 				
 	}	
-	//printf("Socket worker exited the while loop.\n");
+	//printf("Socket worker exited the while loop. Closing %d\n",fd);
 	close(fd);
 	free(buffer);
-	//return(0);	
+	return(0);	
 }
 //Makes a node for the linked list
 typedef struct node{
@@ -259,7 +258,9 @@ typedef TAILQ_HEAD(head_s, node) head_t;
 head_t head;
 
 void create_node(int fd, char *remote_ip){
+	//printf("creating node\n");
 	pthread_mutex_lock(&linked_list_mutex);
+	//linkded_list_initialized=true;
 	////printf("Address of head passed to create node %p\n",arg);
 	//head_t myhead=*(head_t*) arg; //we received a pointer, therefore we dereference the whole thing (first *), and we correctly cast arg as a pointer (second *)
 	//head_t* myhead=(head_t*) arg;
@@ -284,27 +285,32 @@ void create_node(int fd, char *remote_ip){
 	}
 
 void cleanup(void) {
-	//printf("running cleanup\n");
+	printf("running cleanup\n");
+
 	struct node * e = NULL;
-	//printf("joining threads\n");
-    TAILQ_FOREACH(e, &head, nodes)
-    {
-        ////printf("thread id %d\n", e->id);
+	printf("joining threads\n");
+	pthread_mutex_lock(&linked_list_mutex);
+	TAILQ_FOREACH(e, &head, nodes)
+	{
+		//printf("thread id %d\n", e->id);
 		pthread_join(e->mythread,NULL);
-		////printf("closing fd %d\n",e->fd);
+		//printf("closing fd %d\n",e->fd);
 		close(e->fd);
-    }
-	close(parent_fd);
+	}
+	printf("closing parent: %d\n",parent_fd);
+	
 	//printf("deleting linked list\n");
-    while (!TAILQ_EMPTY(&head))
-    {
-        e = TAILQ_FIRST(&head);
-        TAILQ_REMOVE(&head, e, nodes);
-        free(e);
-        e = NULL;
-    }
+	while (!TAILQ_EMPTY(&head))
+	{
+		e = TAILQ_FIRST(&head);
+		TAILQ_REMOVE(&head, e, nodes);
+		free(e);
+		e = NULL;
+	}
 	
 	
+	pthread_mutex_unlock(&linked_list_mutex);
+	close(parent_fd);
 }
 
 
@@ -317,9 +323,14 @@ void open_socket(void){
 			hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
 			hints.ai_flags = AI_PASSIVE; // fill in my IP for me
 			syslog(LOG_INFO,"RUNNING GETADDR INFO");
-			getaddrinfo("0.0.0.0","9000", &hints, &res); //this function sets up the res struct based on hints
+			getaddrinfo("127.0.0.1","9000", &hints, &res); //this function sets up the res struct based on hints
 			parent_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol); //create the socket file descriptor
 			//printf("Parent fd:%d\n",parent_fd);
+			if (parent_fd <1){
+				printf("error creating socket, exiting\n");
+				exit(1);
+			}
+			
 			const int enable = 1;
 			setsockopt(parent_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 			syslog(LOG_INFO,"SET OPTS");
@@ -331,10 +342,9 @@ void open_socket(void){
 									syslog(LOG_INFO,"EXITING");
 									exit(-1);
 									}
-			pid_t pid = fork();
-			if (pid > 0) { //i am the parent
-				return(0);
-			}
+			int newproc=fork();
+			if (newproc != 0){exit(0);}
+			
 			struct itimerval timer;
 			// Set the signal handler
 			//signal(SIGALRM, print_time_to_file);
@@ -345,8 +355,12 @@ void open_socket(void){
 			timer.it_interval.tv_usec = 0;
 			// Start the timer
 			setitimer(ITIMER_REAL, &timer, NULL);
-			//printf("listening\n");
+			printf("listening\n");
 			int listening_output=listen(parent_fd, 1);
+			if (listening_output != 0){
+				printf("can't listen\n");
+				exit(1);
+			}
 			
 			while(! should_quit){
 				struct sockaddr_in remote_addr; //this is where we will put the remote addr info
@@ -366,7 +380,7 @@ void open_socket(void){
 	}
 
 void delete_file(void){
-	int unlink_output=unlink (outfile); 
+	unlink (outfile); 
 	////printf("removed file\n");
 	}
 	
@@ -398,7 +412,7 @@ int main(){
     }
 	
 	open_socket();
-	return(0);
+
     
 
 
