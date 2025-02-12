@@ -218,7 +218,7 @@ void * connection_worker(void * arg){
 					
 					//cleanup and wait for more, or close connection?
 					if (!close_socket_when_receive_delim){
-						printf("continuing to listen on connection for fd %d\n",fd):
+						printf("continuing to listen on connection for fd %d\n",fd);
 						char * pointer = realloc(buffer,BUFFER_SIZE);
 						buffer=pointer;
 						total_bytes_received=0;
