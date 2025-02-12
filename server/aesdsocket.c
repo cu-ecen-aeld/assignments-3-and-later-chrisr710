@@ -163,7 +163,7 @@ void * connection_worker(void * arg){
 	////printf("THe configured remote ip address:%s\n",f->ip_addr);
 	strcpy(remote_ip_str,f->ip_addr);
 	//char *remote_ip_str=f->ip_addr;
-	////printf("remote ip:%s\n",remote_ip_str);
+	printf("remote ip:%s\n",remote_ip_str);
 	syslog(LOG_INFO,"Accepted connection from %s",remote_ip_str);
 	//printf("NEW CONNECTION!\n");
 	pthread_mutex_unlock(&linked_list_mutex);
@@ -182,7 +182,7 @@ void * connection_worker(void * arg){
 										break;
 				}
 				total_bytes_received= total_bytes_received+bytes_received;
-				//printf("total bytes received:%d\n",total_bytes_received);
+				printf("fd: %d total bytes received:%d%d\n",fd,total_bytes_received);
 				//find_delimter_position(char * buffer,long buffer_pos,long bytes_received_this_iteration)
 				delimiter_position=find_delimter_position(buffer,buffer_position,bytes_received);
 				if (delimiter_position==-1){ //there is more to come
@@ -191,7 +191,7 @@ void * connection_worker(void * arg){
 					buffer_position=buffer_position+bytes_received;
 					available_buffer=buffer_size-bytes_received;
 					if (buffer_position==buffer_size){  //we have filled the buffer but did not find delimiter yet
-						//printf("reallocating buffer\n");
+						printf("reallocating buffer\n");
 						char*newptr;
 						newptr = realloc(buffer,buffer_size+BUFFER_SIZE);
 						buffer=newptr;
@@ -201,7 +201,7 @@ void * connection_worker(void * arg){
 				}
 				else{
 					//we have found the delimiter
-					//printf("delimiter received, dumping buffer to file\n");
+					printf("delimiter received, dumping buffer to file\n");
 					//char instring[500];
 					//int x=0;
 					//printf("BYTES RECEIVED HERE IS:%ld\n",bytes_received);
@@ -218,6 +218,7 @@ void * connection_worker(void * arg){
 					
 					//cleanup and wait for more, or close connection?
 					if (!close_socket_when_receive_delim){
+						printf("looping for more data from fd %d\n",fd);
 						char * pointer = realloc(buffer,BUFFER_SIZE);
 						buffer=pointer;
 						total_bytes_received=0;
