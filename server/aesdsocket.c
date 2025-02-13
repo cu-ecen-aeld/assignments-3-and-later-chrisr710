@@ -172,7 +172,7 @@ void * connection_worker(void * arg){
 					printf("Listening socket closed because of signal interrupt\n");
 					close(fd);
 				}
-				//printf("Socket for id %d receiving up to %d bytes\n",f->id,available_buffer);
+				printf("Socket for fd %d receiving up to %d bytes\n",fd,available_buffer);
 				bytes_received=recv(fd,buffer+total_bytes_received,available_buffer,0); //receive starting at new buffer
 				//printf("node %d bytes_received=%ld\n",f->id,bytes_received);
 				if (bytes_received < 1){
@@ -356,6 +356,7 @@ void open_socket(void){
 			timer.it_interval.tv_usec = 0;
 			// Start the timer
 			setitimer(ITIMER_REAL, &timer, NULL);
+            
 			printf("listening\n");
 			int listening_output=listen(parent_fd, 1000);
 			if (listening_output != 0){
@@ -372,8 +373,9 @@ void open_socket(void){
                 if (new_socket > 1){
 				
                     inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str,addr_size );
-                    create_node(new_socket,remote_ip_str);
+                    
                     printf("creating new node for socket with fd %d\n",new_socket);
+                    create_node(new_socket,remote_ip_str);
 				//now start a thread. 
                 } 
                 else{
