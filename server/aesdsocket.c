@@ -376,8 +376,9 @@ void open_socket(void){
                     printf("creating new node for socket with fd %d\n",new_socket);
 				//now start a thread. 
                 }  
-                printf("Bad socket connection with fd %d\n,new_socket);
-	}
+                printf("Bad socket connection with fd %d\n",new_socket);
+            }   
+}
 
 void delete_file(void){
 	unlink (outfile); 
