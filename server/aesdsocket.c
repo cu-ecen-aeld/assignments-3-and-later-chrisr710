@@ -357,7 +357,7 @@ void open_socket(void){
 			// Start the timer
 			setitimer(ITIMER_REAL, &timer, NULL);
 			printf("listening\n");
-			int listening_output=listen(parent_fd, 1);
+			int listening_output=listen(parent_fd, 1000);
 			if (listening_output != 0){
 				printf("can't listen\n");
 				exit(1);
@@ -369,14 +369,16 @@ void open_socket(void){
 				addr_size = sizeof remote_addr;
 				char remote_ip_str[REMOTE_IP_SIZE];
 				int new_socket= accept(parent_fd, (struct sockaddr *)&remote_addr, &addr_size);
-                if (new_socket>1){
+                if (new_socket > 1){
 				
                     inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str,addr_size );
                     create_node(new_socket,remote_ip_str);
                     printf("creating new node for socket with fd %d\n",new_socket);
 				//now start a thread. 
-                }  
-                printf("Bad socket connection with fd %d\n",new_socket);
+                } 
+                else{
+                    printf("Bad socket connection with fd %d\n",new_socket);
+                }
             }   
 }
 
