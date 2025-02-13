@@ -178,7 +178,7 @@ void * connection_worker(void * arg){
 				if (bytes_received < 1){
 										////printf("connection closed; done\n");
 										syslog(LOG_INFO,"Closed connection from %s",remote_ip_str);
-										printf("got a hangup\n");
+										printf("got a hangup on fd %d\n",fd);
 										break;
 				}
 				total_bytes_received= total_bytes_received+bytes_received;
@@ -237,7 +237,7 @@ void * connection_worker(void * arg){
 	
 				
 	}	
-	//printf("Socket worker exited the while loop. Closing %d\n",fd);
+	printf("Socket worker exited the while loop. Closing %d\n",fd);
 	close(fd);
 	free(buffer);
 	return(0);	
