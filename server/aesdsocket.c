@@ -261,7 +261,7 @@ head_t head;
 
 void create_node(int fd, char *remote_ip){
 	printf("creating node for fd %d\n",fd);
-	pthread_mutex_lock(&linked_list_mutex);
+	//pthread_mutex_lock(&linked_list_mutex);
 	//linkded_list_initialized=true;
 	////printf("Address of head passed to create node %p\n",arg);
 	//head_t myhead=*(head_t*) arg; //we received a pointer, therefore we dereference the whole thing (first *), and we correctly cast arg as a pointer (second *)
@@ -372,7 +372,7 @@ void open_socket(void){
 				char remote_ip_str[REMOTE_IP_SIZE];
 				int new_socket= accept(parent_fd, (struct sockaddr *)&remote_addr, &addr_size);
                 if (new_socket > 1){
-				
+                    pthread_mutex_lock(&linked_list_mutex);
                     inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str,addr_size );
                     
                     printf("creating new node for socket with fd %d\n",new_socket);
