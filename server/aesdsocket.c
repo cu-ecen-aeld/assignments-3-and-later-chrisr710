@@ -158,6 +158,7 @@ void * connection_worker(void * arg){
 	//long end_address_of_completed_message=0;
 	long delimiter_position;
 	struct connection_worker_params *f=(struct connection_worker_params *) arg;
+    printf("starting fd int = %d\n",f->fd);
 	int fd=f->fd;
 	char remote_ip_str[REMOTE_IP_SIZE];
 	////printf("THe configured remote ip address:%s\n",f->ip_addr);
@@ -259,7 +260,7 @@ typedef TAILQ_HEAD(head_s, node) head_t;
 head_t head;
 
 void create_node(int fd, char *remote_ip){
-	//printf("creating node\n");
+	printf("creating node for fd %d\n",fd);
 	pthread_mutex_lock(&linked_list_mutex);
 	//linkded_list_initialized=true;
 	////printf("Address of head passed to create node %p\n",arg);
