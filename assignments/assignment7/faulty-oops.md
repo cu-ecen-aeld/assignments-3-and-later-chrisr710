@@ -1,5 +1,9 @@
 Below shows that the faulty module failed and the oops message.
 We see it occured in the faulty module with the faulty_write function.
+This is similar to what is discussed in the video. A null pointer exists at the faulty_write write function at 
+0x10 (10 bytes in) and the function is 32 bytes long.
+This is the same issue as described in the lectures, the purposeful dereference of a null pointer,
+but the function bytes are different because of the difference of hardware (the book used an x86 example).
 
 
 # echo “hello_world” > /dev/faulty
