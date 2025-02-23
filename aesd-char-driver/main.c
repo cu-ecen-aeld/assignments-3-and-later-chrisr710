@@ -81,7 +81,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 {
 	//this function handles WRITES to the dev (reads from my perspective)
     ssize_t retval = -ENOMEM;
-    PDEBUG("writey %zu bytes with offset %lld",count,*f_pos);
+    PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
 	char * mybuffer = kmalloc(100 * sizeof(char), GFP_KERNEL);
 	PDEBUG("kmalloc done");
 	struct aesd_dev *dev = filp->private_data;
