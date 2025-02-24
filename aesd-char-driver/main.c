@@ -82,13 +82,13 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	//this function handles WRITES to the dev (reads from my perspective)
     ssize_t retval = -ENOMEM;
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
-	char * mybuffer = kmalloc(100 * sizeof(char), GFP_KERNEL);
-	PDEBUG("kmalloc done");
-	struct aesd_dev *dev = filp->private_data;
+    char *mybuffer = kmalloc(100, GFP_KERNEL);
+    PDEBUG("kmalloc done");
+    struct aesd_dev *dev = filp->private_data;
     retval = 0;
-    copy_to_user(mybuffer,buf,count);
-	PDEBUG("COPIED TO MY BUF\n");
-	for (int i=0; i<count;i++){PDEBUG("CHAR");PDEBUG("i=%d",i);}
+    retval=copy_from_user(mybuffer,buf,count); //WHY IS THIS BACKWARDS AND WORKS?
+	PDEBUG("COPIED TO MY BUFER, returned %ld\n",retval);
+	for (int i=0; i<count;i++){PDEBUG("CHAR[%d]:%c",i,mybuffer[i]);PDEBUG("i=%d",i);}
 	PDEBUG("fpos SET");
 	*f_pos = 4; 
 	retval=count;//NEED TO DO THIS OTHERWISE ENDLESS LOOP!!!
