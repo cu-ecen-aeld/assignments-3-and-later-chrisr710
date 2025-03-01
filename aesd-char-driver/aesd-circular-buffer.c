@@ -15,6 +15,20 @@
 #endif
 
 #include "aesd-circular-buffer.h"
+#define AESD_DEBUG 1  //Remove comment on this line to enable debug
+
+#undef PDEBUG             /* undef it, just in case */
+#ifdef AESD_DEBUG
+#  ifdef __KERNEL__
+     /* This one if debugging is on, and kernel space */
+#    define PDEBUG(fmt, args...) printk( KERN_DEBUG "aesdchar: " fmt, ## args)
+#  else
+     /* This one for user space */
+#    define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
+#  endif
+#else
+#  define PDEBUG(fmt, args...) /* not debugging: nothing */
+#endif
 
 /**
  * @param buffer the buffer to search for corresponding offset.  Any necessary locking must be performed by caller.
@@ -110,22 +124,38 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 * Any necessary locking must be handled by the caller
 * Any memory referenced in @param add_entry must be allocated by and/or must have a lifetime managed by the caller.
 */
-void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
+char* aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
 
 {
+		bool need_freed=false;
+		size_t offsetter = buffer->in_offs;
+		struct aesd_circular_buffer * dummy=buffer;
+		char * oldbufferptr=buffer->entry[buffer->in_offs].buffptr;
+		
+		if (oldbufferptr != NULL){
+			PDEBUG("_____________THERE IS AN EXISTING ENTRY BUFFER AT: %p, SIZE: %ld",oldbufferptr,buffer->entry[buffer->in_offs].size);
+			PDEBUG("_____________*ACTIVATING NEEDFREED MODE");
+			need_freed=true;
+		}
+		
+		PDEBUG("_____________ADDRESS OF ENTRY CHAR BUFFER BEING ADDED: %p",add_entry->buffptr);
+		PDEBUG("_____________SIZE OF ENTRY CHAR BUFFER BEING ADDED: %ld",add_entry->size);
+		PDEBUG("_____________CHAR AT POS 1 of INCOMING BUFFER: %c",add_entry->buffptr[1]);
 		
 		
-		//printf("Inserting entry %s at %d\n",add_entry->buffptr,buffer->in_offs);
-		buffer->entry[buffer->in_offs]=*add_entry;
+		buffer->entry[buffer->in_offs].buffptr = add_entry->buffptr;
+		buffer->entry[buffer->in_offs].size =  add_entry->size;
+		
+		PDEBUG("____________VALUE OF CURRENT ENTRY AFTER ADDING=%p",buffer->entry[buffer->in_offs].buffptr);
 		if (buffer->in_offs == buffer->out_offs){
 			buffer->out_offs+=1;
 			if (buffer->out_offs == (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED)){
 				buffer->out_offs=0;
 			}
-		//printf("incremented buffer.in_offs to %d\n",buffer->in_offs);
 		}
 		
 		buffer->in_offs++;
+		
 		if (buffer->in_offs == AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED){
 				buffer->in_offs=0;
 				buffer->full=true;
@@ -134,7 +164,11 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
 		}
 		
 		//if the buffer is full and the in_offset == the outoffset, we will overwrite something so advance outoffset. If that turns it to greater than the size of the buffer, 
-		
+		if (need_freed){
+			
+			return(oldbufferptr);
+		}
+		return(NULL);
 		
 	
 		

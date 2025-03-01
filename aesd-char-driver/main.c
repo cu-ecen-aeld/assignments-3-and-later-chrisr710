@@ -90,12 +90,13 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	
 	buf_entry=dev->read_buf;
 	if (dev->read_buf->buffptr == NULL)
-		{PDEBUG("bufprt was null");dev->read_buf->buffptr = kmalloc(count,GFP_KERNEL);
+		{//PDEBUG("bufprt was null");
+		dev->read_buf->buffptr = kmalloc(count,GFP_KERNEL);
 		 dev->read_buf->size=0;
 	}
-	else {PDEBUG("buffptr was not null");
-		PDEBUG("SIZE IS: %ld",dev->read_buf->size);
-		PDEBUG("increasing buff size by %ld",count);
+	else {//PDEBUG("buffptr was not null");
+		//PDEBUG("SIZE IS: %ld",dev->read_buf->size);
+		//PDEBUG("increasing buff size by %ld",count);
 		char *new_ptr=NULL;
 		new_ptr=krealloc(dev->read_buf->buffptr,dev->read_buf->size+count,GFP_KERNEL);
 		dev->read_buf->buffptr=new_ptr;
@@ -103,36 +104,44 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     
 	ssize_t retval = -ENOMEM;
     
-	PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
-	PDEBUG("address of dev = %p",dev);
-	PDEBUG("ppaddress of dev->read_buf=%p",buf_entry);
-	PDEBUG("address of buffer=%p",buf_entry->buffptr);
+	//PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
+	//PDEBUG("address of dev = %p",dev);
+	//PDEBUG("ppaddress of dev->read_buf=%p",buf_entry);
+	PDEBUG("address of a new circular buffer entry=%p",buf_entry);
+	PDEBUG("address of buffer within it=%p",buf_entry->buffptr);
 	
     retval = 0;
     
 	retval=copy_from_user(dev->read_buf->buffptr + dev->read_buf->size,buf,count); //WHY IS THIS BACKWARDS AND WORKS?
-	PDEBUG("COPIED TO MY BUFER, returned %ld\n",retval);
+	//PDEBUG("COPIED TO MY BUFER, returned %ld\n",retval);
 	bool terminated=false;
 	char * currdata=dev->read_buf->buffptr;
 	currdata+=dev->read_buf->size;
 	for (int i=0; i<count;i++){
 		char mychar=currdata[i];
-		if (mychar=='\n'){terminated=true;}
-		PDEBUG("CHAR[%d]:%c",i,mychar);
-		PDEBUG("i=%d",i);
+		if (mychar=='\n'){
+			terminated=true;
+		}
+		
+		//PDEBUG("CHAR[%d]:%c",i,mychar);
+		//PDEBUG("i=%d",i);
 		dev->read_buf->size++;
 		}
 	if (terminated)
 		{PDEBUG("terminated");
 		for (int i=0;i<dev->read_buf->size;i++)
-			{PDEBUG("%c",dev->read_buf->buffptr[i]);
+			{//PDEBUG("%c",dev->read_buf->buffptr[i]);
 			}
-		//kfree(buf_entry);
-		//buf_entry=NULL;
-		kfree(dev->read_buf->buffptr);
-		dev->read_buf->buffptr=NULL;
-		dev->read_buf->size=0;
-		PDEBUG("freed buf_entry and read buf");
+		PDEBUG("adding a new entry at %p",buf_entry);
+		char * to_free=NULL;
+		to_free = aesd_circular_buffer_add_entry(dev->circ_buf,buf_entry);
+		if (to_free){
+			PDEBUG("Freeing old buffer entry at %p",to_free);
+			kfree(to_free);
+		}
+		//kfree(dev->read_buf->buffptr);
+		dev->read_buf=NULL;
+		
 		}
 	else
 		{PDEBUG("NOT TERMINATED");
@@ -155,6 +164,10 @@ struct file_operations aesd_fops = {
 
 static int aesd_setup_cdev(struct aesd_dev *dev)
 {
+	struct aesd_circular_buffer dummy;
+	dev->circ_buf=kmalloc(sizeof(dummy),GFP_KERNEL);
+	dev->circ_buf->full=false;
+	PDEBUG("circular buffer init at %p",dev->circ_buf);
     int err, devno = MKDEV(aesd_major, aesd_minor);
 
     cdev_init(&dev->cdev, &aesd_fops);
@@ -164,6 +177,7 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     if (err) {
         printk(KERN_ERR "Error %d adding aesd cdev", err);
     }
+	
     return err;
 }
 
