@@ -68,11 +68,20 @@ int aesd_release(struct inode *inode, struct file *filp)
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
+	/*
+	You should use the position specified in the read to determine the location and number of bytes to return.
+
+    You should honor the count argument by sending only up to the first “count” bytes back of the available bytes remaining.
+	*/
 	ssize_t retval = 0;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
-	/**
-     * TODO: handle read
-     */
+	//THE BUFFER: dev->circ_buf
+	struct aesd_dev *dev=filp->private_data; //to get the ptrs
+	struct aesd_buffer_entry * temp_entry; //to fill in temp data
+	//FIND THE ENTRY TO START READING FROM
+	size_t entry_offset_byte_rtn;
+	temp_entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,*f_pos,&entry_offset_byte_rtn);
+	PDEBUG("ENTRY OFFSET IS %ld", entry_offset_byte_rtn);
     return retval;
 }
 
