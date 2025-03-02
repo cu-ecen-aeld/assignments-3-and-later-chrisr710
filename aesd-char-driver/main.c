@@ -19,6 +19,7 @@
 #include <linux/fs.h> // file_operations
 #include "aesdchar.h"
 #include "aesd-circular-buffer.h"
+#include <linux/mutex.h>
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
@@ -67,12 +68,7 @@ int aesd_release(struct inode *inode, struct file *filp)
 
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
-{
-	/*
-	You should use the position specified in the read to determine the location and number of bytes to return.
-
-    You should honor the count argument by sending only up to the first “count” bytes back of the available bytes remaining.
-	*/
+{	
 	ssize_t retval = 0;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 	//THE BUFFER: dev->circ_buf
@@ -81,26 +77,30 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 	//need logic here to get to the NEXT unconsumed entry, which will be the entry that if AFTER fpos
 	loff_t entry_offset_byte_rtn;
 	struct aesd_buffer_entry *temp_entry;
-	if (*f_pos == 0){
-		PDEBUG("FPOS IS ZERO, MUST BE FIRST RUN");
-		temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,1,(size_t *)&entry_offset_byte_rtn);
-	}
-	else{
-		PDEBUG("FPOS IS NOT ZERO");
-		temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,*f_pos + 1,(size_t *)&entry_offset_byte_rtn);
-	}
+	
+	if (*f_pos == 0){PDEBUG("FPOS IS ZERO, MUST BE FIRST RUN");}
+	else{PDEBUG("FPOS IS NOT ZERO");}
+	
+	temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,*f_pos + 1,(size_t *)&entry_offset_byte_rtn);
+	if (temp_entry == NULL){PDEBUG("RETURNING ERR BECAUSE TEMP_ENTRY WAS NULL");
+	return(0);}
+	
 	size_t size_of_current_buffer=temp_entry->size;
 	if (size_of_current_buffer + *f_pos >= count){ //current entry has everything we need!
 		PDEBUG("CURRENT BUFFER HAS EVERYTHIN WE NEED");
-		aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,count,(size_t *)&entry_offset_byte_rtn);
-		copy_to_user(buf,temp_entry->buffptr,entry_offset_byte_rtn);
+		temp_entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,count,(size_t *)&entry_offset_byte_rtn);
+		size_t returner = copy_to_user(buf,temp_entry->buffptr,entry_offset_byte_rtn);
+		if (returner != 0) {return -EFAULT;}
+		
 		*f_pos = *f_pos + entry_offset_byte_rtn;
 		PDEBUG("Set offset to %ld",*f_pos);
 		PDEBUG("returning %ld",entry_offset_byte_rtn);
 		return(entry_offset_byte_rtn);
 	}
 	else{//current entry is not enough to get us over the edge
-		copy_to_user(buf,temp_entry->buffptr,size_of_current_buffer);
+		size_t returner = copy_to_user(buf,temp_entry->buffptr,size_of_current_buffer);
+		if (returner != 0) {return -EFAULT;}
+		
 		*f_pos = *f_pos + size_of_current_buffer;
 		PDEBUG("Set offset to %ld",*f_pos);
 		return(size_of_current_buffer);
@@ -111,15 +111,15 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
+	
 	struct aesd_buffer_entry dummy; //just so I can get the size of one of these. Probably a better way.
 	struct aesd_dev *dev=filp->private_data; //to get the ptrs
 	struct aesd_buffer_entry *buf_entry;
-	
+	if (mutex_lock_interruptible(&dev->lock))
+		{return -ERESTARTSYS;}
 	if (dev->read_buf == NULL)
-		{dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);
-		 
+		{dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);	 
 	}
-	
 	buf_entry=dev->read_buf;
 	if (dev->read_buf->buffptr == NULL)
 		{//PDEBUG("bufprt was null");
@@ -135,10 +135,6 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	}
     
 	ssize_t retval = -ENOMEM;
-    
-	//PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
-	//PDEBUG("address of dev = %p",dev);
-	//PDEBUG("ppaddress of dev->read_buf=%p",buf_entry);
 	PDEBUG("address of a new circular buffer entry=%p",buf_entry);
 	PDEBUG("address of buffer within it=%p",buf_entry->buffptr);
 	
@@ -146,6 +142,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     
 	retval=copy_from_user(dev->read_buf->buffptr + dev->read_buf->size,buf,count); //WHY IS THIS BACKWARDS AND WORKS?
 	//PDEBUG("COPIED TO MY BUFER, returned %ld\n",retval);
+	if (retval != 0) {return(-EFAULT);}
 	bool terminated=false;
 	char * currdata=dev->read_buf->buffptr;
 	currdata+=dev->read_buf->size;
@@ -180,10 +177,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		}
 	
 	retval=count;//NEED TO DO THIS OTHERWISE ENDLESS LOOP!!!
-    /**
-     * TODO: handle write
-     */
-	 
+    
+	mutex_unlock(&dev->lock);
     return retval;
 }
 struct file_operations aesd_fops = {
@@ -228,7 +223,8 @@ int aesd_init_module(void)
         return result;
     }
     memset(&aesd_device,0,sizeof(struct aesd_dev));
-
+	mutex_init(&aesd_device.lock);
+	PDEBUG("initialized semaphore! returned %d");
     
 
     result = aesd_setup_cdev(&aesd_device);
