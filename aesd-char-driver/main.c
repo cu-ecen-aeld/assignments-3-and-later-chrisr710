@@ -77,12 +77,35 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 	//THE BUFFER: dev->circ_buf
 	struct aesd_dev *dev=filp->private_data; //to get the ptrs
-	struct aesd_buffer_entry * temp_entry; //to fill in temp data
 	//FIND THE ENTRY TO START READING FROM
-	size_t entry_offset_byte_rtn;
-	temp_entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,*f_pos,&entry_offset_byte_rtn);
-	PDEBUG("ENTRY OFFSET IS %ld", entry_offset_byte_rtn);
-    return retval;
+	//need logic here to get to the NEXT unconsumed entry, which will be the entry that if AFTER fpos
+	loff_t entry_offset_byte_rtn;
+	struct aesd_buffer_entry *temp_entry;
+	if (*f_pos == 0){
+		PDEBUG("FPOS IS ZERO, MUST BE FIRST RUN");
+		temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,1,(size_t *)&entry_offset_byte_rtn);
+	}
+	else{
+		PDEBUG("FPOS IS NOT ZERO");
+		temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,*f_pos + 1,(size_t *)&entry_offset_byte_rtn);
+	}
+	size_t size_of_current_buffer=temp_entry->size;
+	if (size_of_current_buffer + *f_pos >= count){ //current entry has everything we need!
+		PDEBUG("CURRENT BUFFER HAS EVERYTHIN WE NEED");
+		aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,count,(size_t *)&entry_offset_byte_rtn);
+		copy_to_user(buf,temp_entry->buffptr,entry_offset_byte_rtn);
+		*f_pos = *f_pos + entry_offset_byte_rtn;
+		PDEBUG("Set offset to %ld",*f_pos);
+		PDEBUG("returning %ld",entry_offset_byte_rtn);
+		return(entry_offset_byte_rtn);
+	}
+	else{//current entry is not enough to get us over the edge
+		copy_to_user(buf,temp_entry->buffptr,size_of_current_buffer);
+		*f_pos = *f_pos + size_of_current_buffer;
+		PDEBUG("Set offset to %ld",*f_pos);
+		return(size_of_current_buffer);
+	}
+
 }
 
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,

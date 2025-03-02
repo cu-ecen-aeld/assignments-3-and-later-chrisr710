@@ -57,6 +57,9 @@ extern struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos
 char * aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry);
 
 extern void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer);
+size_t get_index_of_current_entry(struct aesd_buffer_entry* entry_to_check,struct aesd_circular_buffer * circle_buf);
+struct aesd_buffer_entry *get_next_entry_in_buffer(struct aesd_buffer_entry* entry_to_check,struct aesd_circular_buffer * circle_buf);
+size_t get_buffer_size_of_current_entry(struct aesd_buffer_entry* entry_to_check);
 
 /**
  * Create a for loop to iterate over each member of the circular buffer.
