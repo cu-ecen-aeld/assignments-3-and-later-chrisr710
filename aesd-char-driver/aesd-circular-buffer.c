@@ -17,18 +17,7 @@
 #include "aesd-circular-buffer.h"
 #define AESD_DEBUG 1  //Remove comment on this line to enable debug
 
-#undef PDEBUG             /* undef it, just in case */
-#ifdef AESD_DEBUG
-#  ifdef __KERNEL__
-     /* This one if debugging is on, and kernel space */
-#    define PDEBUG(fmt, args...) printk( KERN_DEBUG "aesdcircularbuffer: " fmt, ## args)
-#  else
-     /* This one for user space */
-#    define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
-#  endif
-#else
-#  define PDEBUG(fmt, args...) /* not debugging: nothing */
-#endif
+
 
 /**
  * @param buffer the buffer to search for corresponding offset.  Any necessary locking must be performed by caller.
@@ -52,25 +41,25 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 	size_t bufferinpos=buffer->in_offs;
 	size_t bufferoutpos=buffer->out_offs;
 	bool first_run=true;
-	PDEBUG("CHAR_OFFSET=%ld",char_offset);
+	////PDEBUG("CHAR_OFFSET=%ld",char_offset);
 	while (bufferinpos != bufferoutpos || first_run){
 		if (first_run){
 			//printf("FIRST RUN!\n");
 		}
 		first_run=false;
-		PDEBUG("considering buffer for entry %ld",bufferoutpos);
+		//PDEBUG("considering buffer for entry %ld",bufferoutpos);
 		
 		
 		
 		if (curr_searched_buffer_length + buffer->entry[bufferoutpos].size >= char_offset){
 			curr_searched_buffer_length = curr_searched_buffer_length + buffer->entry[bufferoutpos].size;
-			PDEBUG("CURR_SEARCHED_BUFFER_LENGTH=%ld",curr_searched_buffer_length);
-			PDEBUG("returning buffer entry: %ld\n",bufferoutpos);
+			//PDEBUG("CURR_SEARCHED_BUFFER_LENGTH=%ld",curr_searched_buffer_length);
+			//PDEBUG("returning buffer entry: %ld\n",bufferoutpos);
 			//found_location=true;
 			size_t number_of_bytes_considered_up_to_first_byte_in_this_entry_char_buffer = curr_searched_buffer_length - buffer->entry[bufferoutpos].size;
 			//total - everything we looked for before we got to this one
 			size_t offset_within_this_entry_buffer = char_offset -  number_of_bytes_considered_up_to_first_byte_in_this_entry_char_buffer;
-			PDEBUG("OFFSET WITHIN THIS ENTRY BUFFER:%ld",offset_within_this_entry_buffer);
+			//PDEBUG("OFFSET WITHIN THIS ENTRY BUFFER:%ld",offset_within_this_entry_buffer);
 			* entry_offset_byte_rtn = offset_within_this_entry_buffer;
 			return(&buffer->entry[bufferoutpos]);
 		}
@@ -83,7 +72,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 			bufferoutpos=0;
 		}
 	}
-	PDEBUG("returning null,bufferinpos:%ld == bufferoutpos:%ld\n",bufferinpos,bufferoutpos);
+	//PDEBUG("returning null,bufferinpos:%ld == bufferoutpos:%ld\n",bufferinpos,bufferoutpos);
     return NULL;
 }
 
@@ -101,20 +90,20 @@ char* aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const 
 		char * oldbufferptr=buffer->entry[buffer->in_offs].buffptr;
 		
 		if (oldbufferptr != NULL){
-			PDEBUG("_____________THERE IS AN EXISTING ENTRY BUFFER AT: %p, SIZE: %ld",oldbufferptr,buffer->entry[buffer->in_offs].size);
-			PDEBUG("_____________*ACTIVATING NEEDFREED MODE");
+			//PDEBUG("_____________THERE IS AN EXISTING ENTRY BUFFER AT: %p, SIZE: %ld",oldbufferptr,buffer->entry[buffer->in_offs].size);
+			//PDEBUG("_____________*ACTIVATING NEEDFREED MODE");
 			need_freed=true;
 		}
 		
-		PDEBUG("_____________ADDRESS OF ENTRY CHAR BUFFER BEING ADDED: %p",add_entry->buffptr);
-		PDEBUG("_____________SIZE OF ENTRY CHAR BUFFER BEING ADDED: %ld",add_entry->size);
-		PDEBUG("_____________CHAR AT POS 1 of INCOMING BUFFER: %c",add_entry->buffptr[1]);
+		//PDEBUG("_____________ADDRESS OF ENTRY CHAR BUFFER BEING ADDED: %p",add_entry->buffptr);
+		//PDEBUG("_____________SIZE OF ENTRY CHAR BUFFER BEING ADDED: %ld",add_entry->size);
+		//PDEBUG("_____________CHAR AT POS 1 of INCOMING BUFFER: %c",add_entry->buffptr[1]);
 		
 		
 		buffer->entry[buffer->in_offs].buffptr = add_entry->buffptr;
 		buffer->entry[buffer->in_offs].size =  add_entry->size;
 		
-		PDEBUG("____________VALUE OF CURRENT ENTRY AFTER ADDING=%p",buffer->entry[buffer->in_offs].buffptr);
+		//PDEBUG("____________VALUE OF CURRENT ENTRY AFTER ADDING=%p",buffer->entry[buffer->in_offs].buffptr);
 		if (buffer->in_offs == buffer->out_offs && buffer->full){
 			buffer->out_offs+=1;
 			if (buffer->out_offs == (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED)){
@@ -152,7 +141,7 @@ void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer)
 }
 
 size_t get_buffer_size_of_current_entry(struct aesd_buffer_entry* entry_to_check){
-	PDEBUG("*** get buffer size of %p, returning %ld",entry_to_check,entry_to_check->size);
+	//PDEBUG("*** get buffer size of %p, returning %ld",entry_to_check,entry_to_check->size);
 	return(entry_to_check->size);
 }
 
@@ -160,7 +149,7 @@ size_t get_index_of_current_entry(struct aesd_buffer_entry* entry_to_check,struc
 	for (size_t position=0;position < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; position++){
 		if (entry_to_check == &(circle_buf->entry[position])) {return(position);}
 	}
-	PDEBUG("COULD NOT FIND A POSITION IN THE CIRCLE BUFFER FOR ENTRY");
+	//PDEBUG("COULD NOT FIND A POSITION IN THE CIRCLE BUFFER FOR ENTRY");
 	return(-1);
 }
 
