@@ -205,6 +205,10 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     dev->read_buf=(struct aesd_buffer_entry*)kmalloc(sizeof(dummy2),GFP_KERNEL);
     dev->read_buf->size=0;
 	dev->read_buf->buffptr=NULL;
+	if dev->read_buf
+	if (dev->read_buf->buffptr==NULL)
+		{PDEBUG("THE BUFFER IS NULL AND THE SIZE IS %ld",dev->read_buf->size);}
+	else{PDEBUG("THE BUFFER IS NOT NULL AND THE SIZE IS %ld",dev->read_buf->size);}
 	PDEBUG("circular buffer init at %p",dev->circ_buf);
 	//size_t returner=mutex_init(&dev->lock);
 	//PDEBUG("initialized semaphore! returned %d",returner);
