@@ -210,8 +210,8 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
 	else
 		{PDEBUG("THE BUFFER IS NOT NULL AND THE SIZE IS %ld",dev->read_buf->size);}
 	PDEBUG("circular buffer init at %p",dev->circ_buf);
-	//size_t returner=mutex_init(&dev->lock);
-	//PDEBUG("initialized semaphore! returned %d",returner);
+	mutex_init(&dev->lock);
+	PDEBUG("initialized semaphore! ");
 	PDEBUG("Set up the read buffer");
     int err, devno = MKDEV(aesd_major, aesd_minor);
 

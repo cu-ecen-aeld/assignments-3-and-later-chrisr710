@@ -429,7 +429,9 @@ int main(){
 	signal(SIGINT, sigint_handler);
 	signal(SIGTERM, sigint_handler);
 	signal(SIGALRM, print_time_to_file);
-	delete_file();
+	if (! use_dev){
+		delete_file();
+	}
 	//printf("Address of first head %p\n",&head);
     TAILQ_INIT(&head); // initialize the head
 	//create_node(&head);
