@@ -82,7 +82,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 	else{PDEBUG("FPOS IS NOT ZERO");}
 	
 	temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,*f_pos + 1,(size_t *)&entry_offset_byte_rtn);
-	if (temp_entry == NULL){PDEBUG("RETURNING ERR BECAUSE TEMP_ENTRY WAS NULL");
+	if (temp_entry == 0){PDEBUG("RETURNING 0 BECAUSE TEMP_ENTRY WAS NULL");
 	return(0);}
 	
 	size_t size_of_current_buffer=temp_entry->size;
@@ -114,19 +114,19 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	PDEBUG("ENTERING WRITE");
 	struct aesd_buffer_entry dummy; //just so I can get the size of one of these. Probably a better way.
 	struct aesd_dev *dev=filp->private_data; //to get the ptrs
-	struct aesd_buffer_entry *buf_entry;
+	
 	if (mutex_lock_interruptible(&dev->lock))
 		{return -ERESTARTSYS;}
 	
 	
 	
-	if (dev->read_buf == NULL)
-		PDEBUG("MALLOCING 1");
-		{dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);	 
-	}
+	if (dev->read_buf == 0)
+		{PDEBUG("MALLOCING 1");
+		dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);	 
+		}
 	
-	buf_entry=dev->read_buf;
-	if (dev->read_buf->buffptr == NULL)
+	
+	if (dev->read_buf->buffptr == 0)
 		{PDEBUG("bufprt was null");
 	     PDEBUG("MALLOCING 2, size malloced is %ld",count);
 		dev->read_buf->buffptr = kmalloc(count,GFP_KERNEL);
@@ -135,15 +135,12 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	else {PDEBUG("buffptr was not null");
 		PDEBUG("SIZE IS: %ld",dev->read_buf->size);
 		PDEBUG("increasing buff size by %ld",count);
-		char *new_ptr;
 		PDEBUG("MALLOCING 3, a size of %ld",dev->read_buf->size + count);
-		new_ptr=krealloc(dev->read_buf->buffptr,dev->read_buf->size + count,GFP_KERNEL);
-		dev->read_buf->buffptr=new_ptr;
+		dev->read_buf->buffptr=krealloc(dev->read_buf->buffptr,dev->read_buf->size + count,GFP_KERNEL);	
 	}
-    
 	ssize_t retval = -ENOMEM;
-	PDEBUG("address of a new circular buffer entry=%p",buf_entry);
-	PDEBUG("address of buffer within it=%p",buf_entry->buffptr);
+	PDEBUG("address of a new circular buffer entry=%p",dev->read_buf);
+	PDEBUG("address of buffer within it=%p",dev->read_buf->buffptr);
 	
     retval = 0;
     
@@ -168,15 +165,15 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		for (int i=0;i<dev->read_buf->size;i++)
 			{//PDEBUG("%c",dev->read_buf->buffptr[i]);
 			}
-		PDEBUG("adding a new entry at %p",buf_entry);
-		char * to_free=NULL;
-		to_free = aesd_circular_buffer_add_entry(dev->circ_buf,buf_entry);
+		PDEBUG("adding a new entry at %p",dev->read_buf);
+		char * to_free=0;
+		to_free = aesd_circular_buffer_add_entry(dev->circ_buf,dev->read_buf);
 		if (to_free){
 			PDEBUG("Freeing old buffer entry at %p",to_free);
 			kfree(to_free);
 		}
 		//kfree(dev->read_buf->buffptr);
-		dev->read_buf=NULL;
+		dev->read_buf=0;
 		
 		}
 	else
@@ -204,8 +201,8 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
 	dev->circ_buf->full=false;
     dev->read_buf=(struct aesd_buffer_entry*)kmalloc(sizeof(dummy2),GFP_KERNEL);
     dev->read_buf->size=0;
-	dev->read_buf->buffptr=NULL;
-	if (dev->read_buf->buffptr==NULL)
+	dev->read_buf->buffptr=0;
+	if (dev->read_buf->buffptr==0)
 		{PDEBUG("THE BUFFER IS NULL AND THE SIZE IS %ld",dev->read_buf->size);}
 	else
 		{PDEBUG("THE BUFFER IS NOT NULL AND THE SIZE IS %ld",dev->read_buf->size);}
