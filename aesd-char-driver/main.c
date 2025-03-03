@@ -122,8 +122,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	
 	if (dev->read_buf == 0)
 		{PDEBUG("MALLOCING 1");
-		dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);
+		dev->read_buf = (aesd_buffer_entry *)kmalloc(sizeof(dummy),GFP_KERNEL);
 		dev->read_buf->buffptr=0;
+		dev->read_buf->size=0;
 		}
 	
 	
@@ -199,6 +200,7 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
 	struct aesd_circular_buffer dummy;
 	struct aesd_buffer_entry dummy2;
 	dev->circ_buf=(struct aesd_circular_buffer*)kmalloc(sizeof(dummy),GFP_KERNEL);
+	aesd_circular_buffer_init(dev->circ_buf);
 	dev->circ_buf->full=false;
     dev->read_buf=(struct aesd_buffer_entry*)kmalloc(sizeof(dummy2),GFP_KERNEL);
     dev->read_buf->size=0;
