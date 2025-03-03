@@ -111,25 +111,30 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-	
+	PDEBUG("ENTERING WRITE");
 	struct aesd_buffer_entry dummy; //just so I can get the size of one of these. Probably a better way.
 	struct aesd_dev *dev=filp->private_data; //to get the ptrs
 	struct aesd_buffer_entry *buf_entry;
 	if (mutex_lock_interruptible(&dev->lock))
 		{return -ERESTARTSYS;}
+	
+	
+	PDEBUG("MALLOCING 1");
 	if (dev->read_buf == NULL)
 		{dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);	 
 	}
+	PDEBUG("MALLOCING 2");
 	buf_entry=dev->read_buf;
 	if (dev->read_buf->buffptr == NULL)
-		{//PDEBUG("bufprt was null");
+		{PDEBUG("bufprt was null");
 		dev->read_buf->buffptr = kmalloc(count,GFP_KERNEL);
 		 dev->read_buf->size=0;
 	}
-	else {//PDEBUG("buffptr was not null");
-		//PDEBUG("SIZE IS: %ld",dev->read_buf->size);
-		//PDEBUG("increasing buff size by %ld",count);
+	else {PDEBUG("buffptr was not null");
+		PDEBUG("SIZE IS: %ld",dev->read_buf->size);
+		PDEBUG("increasing buff size by %ld",count);
 		char *new_ptr=NULL;
+		PDEBUG("MALLOCING 3");
 		new_ptr=krealloc(dev->read_buf->buffptr,dev->read_buf->size+count,GFP_KERNEL);
 		dev->read_buf->buffptr=new_ptr;
 	}
@@ -141,7 +146,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     retval = 0;
     
 	retval=copy_from_user(dev->read_buf->buffptr + dev->read_buf->size,buf,count); //WHY IS THIS BACKWARDS AND WORKS?
-	//PDEBUG("COPIED TO MY BUFER, returned %ld\n",retval);
+	PDEBUG("COPIED TO MY BUFER, returned %ld\n",retval);
 	if (retval != 0) {return(-EFAULT);}
 	bool terminated=false;
 	char * currdata=dev->read_buf->buffptr;
