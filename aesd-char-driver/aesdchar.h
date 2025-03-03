@@ -22,7 +22,7 @@
 #else
 #  define PDEBUG(fmt, args...) /* not debugging: nothing */
 #endif
-
+#define NULL 0
 struct aesd_dev
 {
     struct mutex lock;     /* mutual exclusion semaphore     */
