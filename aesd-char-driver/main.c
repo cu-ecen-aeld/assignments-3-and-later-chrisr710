@@ -122,7 +122,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	
 	if (dev->read_buf == 0)
 		{PDEBUG("MALLOCING 1");
-		dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);	 
+		dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);
+		dev->read_buf->buffptr=0;
 		}
 	
 	
