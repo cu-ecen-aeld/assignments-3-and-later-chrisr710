@@ -119,23 +119,25 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		{return -ERESTARTSYS;}
 	
 	
-	PDEBUG("MALLOCING 1");
+	
 	if (dev->read_buf == NULL)
+		PDEBUG("MALLOCING 1");
 		{dev->read_buf = kmalloc(sizeof(dummy),GFP_KERNEL);	 
 	}
-	PDEBUG("MALLOCING 2");
+	
 	buf_entry=dev->read_buf;
 	if (dev->read_buf->buffptr == NULL)
 		{PDEBUG("bufprt was null");
+	     PDEBUG("MALLOCING 2, size malloced is %ld",count);
 		dev->read_buf->buffptr = kmalloc(count,GFP_KERNEL);
 		 dev->read_buf->size=0;
 	}
 	else {PDEBUG("buffptr was not null");
 		PDEBUG("SIZE IS: %ld",dev->read_buf->size);
 		PDEBUG("increasing buff size by %ld",count);
-		char *new_ptr=NULL;
-		PDEBUG("MALLOCING 3");
-		new_ptr=krealloc(dev->read_buf->buffptr,dev->read_buf->size+count,GFP_KERNEL);
+		char *new_ptr;
+		PDEBUG("MALLOCING 3, a size of %ld",dev->read_buf->size + count);
+		new_ptr=krealloc(dev->read_buf->buffptr,dev->read_buf->size + count,GFP_KERNEL);
 		dev->read_buf->buffptr=new_ptr;
 	}
     
@@ -197,9 +199,16 @@ struct file_operations aesd_fops = {
 static int aesd_setup_cdev(struct aesd_dev *dev)
 {
 	struct aesd_circular_buffer dummy;
-	dev->circ_buf=kmalloc(sizeof(dummy),GFP_KERNEL);
+	struct aesd_buffer_entry dummy2;
+	dev->circ_buf=(struct aesd_circular_buffer*)kmalloc(sizeof(dummy),GFP_KERNEL);
 	dev->circ_buf->full=false;
+    dev->read_buf=(struct aesd_buffer_entry*)kmalloc(sizeof(dummy2),GFP_KERNEL);
+    dev->read_buf->size=0;
+	dev->read_buf->buffptr=NULL;
 	PDEBUG("circular buffer init at %p",dev->circ_buf);
+	//size_t returner=mutex_init(&dev->lock);
+	//PDEBUG("initialized semaphore! returned %d",returner);
+	PDEBUG("Set up the read buffer");
     int err, devno = MKDEV(aesd_major, aesd_minor);
 
     cdev_init(&dev->cdev, &aesd_fops);
@@ -219,6 +228,8 @@ int aesd_init_module(void)
 {
 	//#1
     dev_t dev = 0;
+	
+	
     int result;
     result = alloc_chrdev_region(&dev, aesd_minor, 1,
             "aesdchar");
@@ -228,8 +239,9 @@ int aesd_init_module(void)
         return result;
     }
     memset(&aesd_device,0,sizeof(struct aesd_dev));
-	mutex_init(&aesd_device.lock);
-	PDEBUG("initialized semaphore! returned %d");
+	
+	
+	//aesd_device.read_buf->size=0;
     
 
     result = aesd_setup_cdev(&aesd_device);
