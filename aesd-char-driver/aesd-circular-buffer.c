@@ -50,7 +50,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 		
 		
 		
-		if (curr_searched_buffer_length + buffer->entry[bufferoutpos].size >= char_offset){
+		if (curr_searched_buffer_length + buffer->entry[bufferoutpos].size > char_offset){
 			curr_searched_buffer_length = curr_searched_buffer_length + buffer->entry[bufferoutpos].size;
 			//PDEBUG("CURR_SEARCHED_BUFFER_LENGTH=%ld",curr_searched_buffer_length);
 			//PDEBUG("returning buffer entry: %ld\n",bufferoutpos);

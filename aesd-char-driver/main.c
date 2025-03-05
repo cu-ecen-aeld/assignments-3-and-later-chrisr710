@@ -113,11 +113,12 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 	//THE BUFFER: dev->circ_buf
 	struct aesd_dev *dev=filp->private_data; //to get the ptrs
-	AESD_CIRCULAR_BUFFER_FOREACH(tentry,dev->circ_buf,ix) {
+	/*AESD_CIRCULAR_BUFFER_FOREACH(tentry,dev->circ_buf,ix) {
 	   PDEBUG("INDEX= %ld, CHAR0=%c", get_index_of_current_entry(tentry,dev->circ_buf),(char)*(tentry->buffptr));
 	}
+	*/
 	ssize_t total_size_of_buffers=get_length_of_all_entries_in_buffer(dev->circ_buf);
-	if (count - *f_pos > total_size_of_buffers){  //we must tell YOU how many bytes to request.
+	if (count > total_size_of_buffers){  //we must tell YOU how many bytes to request.
 		count = total_size_of_buffers - *f_pos;
 		PDEBUG("reset count to %ld",count);
 		//PDEBUG("count is for greater than size of all buffers, must be using cat, etc.");
@@ -128,41 +129,64 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 		return(0); //you have gotten all we have
 	}
 	
+	
 	//FIND THE ENTRY TO START READING FROM
 	//need logic here to get to the NEXT unconsumed entry, which will be the entry that if AFTER fpos
 	loff_t entry_offset_byte_rtn;
 	struct aesd_buffer_entry *temp_entry;
-	PDEBUG("searching for entry at offset %ld",(*f_pos) + 1);
+	PDEBUG("searching for entry at offset %ld",(*f_pos));
 	//darnit, this won't work if searching for one byte. OR will it?
-	temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,(*f_pos) + 1,(size_t *)&entry_offset_byte_rtn);
+	temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,(*f_pos),(size_t *)&entry_offset_byte_rtn);
+	
+	
 	if (temp_entry == 0){PDEBUG("RETURNING 0 BECAUSE TEMP_ENTRY WAS NULL");
 		return(0);}
-	
+		
+	PDEBUG("We chose entry with index %ld because it was what was returned for offset %ld",get_index_of_current_entry(temp_entry, dev->circ_buf),(*f_pos));
 	size_t size_of_current_buffer=temp_entry->size;
 	PDEBUG("check if size of current entry[%ld]: %ld is >= the count %ld",get_index_of_current_entry(temp_entry, dev->circ_buf), size_of_current_buffer,count);
+	PDEBUG("THE PLACE WE WILL START COPYING ON THIS IS %ld",entry_offset_byte_rtn);
+	PDEBUG("NOW RETURN THE BYTES FROM THIS ENTRY, UP TO THE CURRENT LIMIT, WHICH IS THE SMALLER OF SIZE OF THE CURRENT BUFFER, OR COUNT!");
+	size_t bytes_to_copy=count;
+	if ((size_of_current_buffer - entry_offset_byte_rtn) < count){ //we are going to copy more stuff later,
+		bytes_to_copy = size_of_current_buffer - entry_offset_byte_rtn;} //just copy everything out of the buffer except what was before the byte return.
+		
+	if ((size_of_current_buffer - entry_offset_byte_rtn) > count){ //we have more than we need in this buffer
+    bytes_to_copy = count; //Only copy out as much as we need		
+	}
+	PDEBUG("WE HAVE DETERMINED THAT WE SHOULD COPY %ld bytes from this starting at offset %ld", bytes_to_copy, entry_offset_byte_rtn);
+	
+	//copy the calculated number of bytes to the user
+	size_t returner = copy_to_user(buf,temp_entry->buffptr + entry_offset_byte_rtn, bytes_to_copy);
+	PDEBUG("COPYING RETURNED %ld",returner);
+	*f_pos = *f_pos + bytes_to_copy;
+	PDEBUG("FPOS set to %ld, returning %ld",*f_pos,bytes_to_copy);
+	return(bytes_to_copy);
+	
+/*
 	
 	if (size_of_current_buffer >= (count)){ //current entry has everything we need!
 		PDEBUG("CURRENT BUFFER HAS EVERYTHIN WE NEED, will search for entry with offset %ld",(*f_pos) + 1 );
 		
 		temp_entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf, (*f_pos) + 1,(size_t *)&entry_offset_byte_rtn);
-		size_t returner = copy_to_user(buf,temp_entry->buffptr,count);
+		size_t returner = copy_to_user(buf + entry_offset_byte_rtn - 1,temp_entry->buffptr,count);
 		if (returner != 0) {return -EFAULT;}
-		
+		PDEBUG("offset within this buffer: %ld",entry_offset_byte_rtn);
 		*f_pos = *f_pos + count;
 		PDEBUG("Set fpos to %ld",*f_pos);
 		PDEBUG("returning this many bytes: %ld",count);
 		return(count);
 	}
 	else{//current entry is not enough to get us over the edge
-			size_t returner = copy_to_user(buf,temp_entry->buffptr,size_of_current_buffer);
+			size_t returner = copy_to_user(buf + entry_offset_byte_rtn -1,temp_entry->buffptr,size_of_current_buffer);
 			if (returner != 0) {return -EFAULT;}
-		
+		PDEBUG("offset within this buffer: %ld",entry_offset_byte_rtn);
 		*f_pos = *f_pos + size_of_current_buffer;
 		PDEBUG("Set offset to %ld",*f_pos);
 		PDEBUG("returning %ld",size_of_current_buffer);
 		return(size_of_current_buffer);
 	}
-
+*/
 }
 
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
