@@ -66,43 +66,100 @@ int aesd_release(struct inode *inode, struct file *filp)
     return 0;
 }
 
+
+//apparently these functions just set fpos
+loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
+{
+	struct aesd_dev *dev = filp->private_data;
+	size_t newpos;
+	PDEBUG("WHENCE IS %d",whence);
+	switch(whence) {
+	  case 0: /* SEEK_SET */
+	    PDEBUG("POSITION SEEK SET");
+		newpos = off;
+		break;
+
+	  case 1: /* SEEK_CUR */
+		newpos = filp->f_pos + off;
+		 PDEBUG("POSITION SEEK CUR");
+		break;
+
+	  case 2: /* SEEK_END */
+		newpos = get_length_of_all_entries_in_buffer(dev->circ_buf) + off;
+		 PDEBUG("POSITION SEEK END");
+		break;
+
+	  default: /* can't happen */
+	    PDEBUG("CANT HAPPEN. YET IT DID");
+		return -EINVAL;
+	}
+	if (newpos < 0) return -EINVAL;
+	PDEBUG("SEEK RETURNING FPOS %ld",newpos);
+	filp->f_pos = newpos;
+	return newpos;
+}
+
+
+
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {	
+
+	size_t te=0;
+	uint8_t ix;
+	struct aesd_buffer_entry *tentry;
+	
 	ssize_t retval = 0;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 	//THE BUFFER: dev->circ_buf
 	struct aesd_dev *dev=filp->private_data; //to get the ptrs
+	AESD_CIRCULAR_BUFFER_FOREACH(tentry,dev->circ_buf,ix) {
+	   PDEBUG("INDEX= %ld, CHAR0=%c", get_index_of_current_entry(tentry,dev->circ_buf),(char)*(tentry->buffptr));
+	}
+	ssize_t total_size_of_buffers=get_length_of_all_entries_in_buffer(dev->circ_buf);
+	if (count - *f_pos > total_size_of_buffers){  //we must tell YOU how many bytes to request.
+		count = total_size_of_buffers - *f_pos;
+		PDEBUG("reset count to %ld",count);
+		//PDEBUG("count is for greater than size of all buffers, must be using cat, etc.");
+		}
+	
+	if (count == 0){
+		PDEBUG("You have consumed all in the buffers");
+		return(0); //you have gotten all we have
+	}
+	
 	//FIND THE ENTRY TO START READING FROM
 	//need logic here to get to the NEXT unconsumed entry, which will be the entry that if AFTER fpos
 	loff_t entry_offset_byte_rtn;
 	struct aesd_buffer_entry *temp_entry;
-	
-	if (*f_pos == 0){PDEBUG("FPOS IS ZERO, MUST BE FIRST RUN");}
-	else{PDEBUG("FPOS IS NOT ZERO");}
-	
-	temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,*f_pos + 1,(size_t *)&entry_offset_byte_rtn);
+	PDEBUG("searching for entry at offset %ld",(*f_pos) + 1);
+	//darnit, this won't work if searching for one byte. OR will it?
+	temp_entry=aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,(*f_pos) + 1,(size_t *)&entry_offset_byte_rtn);
 	if (temp_entry == 0){PDEBUG("RETURNING 0 BECAUSE TEMP_ENTRY WAS NULL");
-	return(0);}
+		return(0);}
 	
 	size_t size_of_current_buffer=temp_entry->size;
-	if (size_of_current_buffer + *f_pos >= count){ //current entry has everything we need!
-		PDEBUG("CURRENT BUFFER HAS EVERYTHIN WE NEED");
-		temp_entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf,count,(size_t *)&entry_offset_byte_rtn);
-		size_t returner = copy_to_user(buf,temp_entry->buffptr,entry_offset_byte_rtn);
+	PDEBUG("check if size of current entry[%ld]: %ld is >= the count %ld",get_index_of_current_entry(temp_entry, dev->circ_buf), size_of_current_buffer,count);
+	
+	if (size_of_current_buffer >= (count)){ //current entry has everything we need!
+		PDEBUG("CURRENT BUFFER HAS EVERYTHIN WE NEED, will search for entry with offset %ld",(*f_pos) + 1 );
+		
+		temp_entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->circ_buf, (*f_pos) + 1,(size_t *)&entry_offset_byte_rtn);
+		size_t returner = copy_to_user(buf,temp_entry->buffptr,count);
 		if (returner != 0) {return -EFAULT;}
 		
-		*f_pos = *f_pos + entry_offset_byte_rtn;
-		PDEBUG("Set offset to %ld",*f_pos);
-		PDEBUG("returning %ld",entry_offset_byte_rtn);
-		return(entry_offset_byte_rtn);
+		*f_pos = *f_pos + count;
+		PDEBUG("Set fpos to %ld",*f_pos);
+		PDEBUG("returning this many bytes: %ld",count);
+		return(count);
 	}
 	else{//current entry is not enough to get us over the edge
-		size_t returner = copy_to_user(buf,temp_entry->buffptr,size_of_current_buffer);
-		if (returner != 0) {return -EFAULT;}
+			size_t returner = copy_to_user(buf,temp_entry->buffptr,size_of_current_buffer);
+			if (returner != 0) {return -EFAULT;}
 		
 		*f_pos = *f_pos + size_of_current_buffer;
 		PDEBUG("Set offset to %ld",*f_pos);
+		PDEBUG("returning %ld",size_of_current_buffer);
 		return(size_of_current_buffer);
 	}
 
@@ -192,6 +249,7 @@ struct file_operations aesd_fops = {
     .read =     aesd_read,
     .write =    aesd_write,
     .open =     aesd_open,
+	.llseek =   aesd_llseek,
     .release =  aesd_release,
 };
 
@@ -262,6 +320,16 @@ void aesd_cleanup_module(void)
     dev_t devno = MKDEV(aesd_major, aesd_minor);
 
     cdev_del(&aesd_device.cdev);
+	uint8_t index;
+	struct aesd_buffer_entry *entry;
+	AESD_CIRCULAR_BUFFER_FOREACH(entry,aesd_device.circ_buf,index) {
+	   PDEBUG("Freed entry at %p",entry->buffptr);
+       kfree(entry->buffptr);
+	}
+	//free read buffer
+	//PDEBUG("Free read buffer at %p",&aesd_device.read_buf);
+	//kfree(&(aesd_device.read_buf));
+	//free lock?
 
     /**
      * TODO: cleanup AESD specific poritions here as necessary
@@ -269,6 +337,11 @@ void aesd_cleanup_module(void)
 
     unregister_chrdev_region(devno, 1);
 }
+
+
+
+
+
 
 
 
