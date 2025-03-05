@@ -20,6 +20,7 @@
 #include "aesdchar.h"
 #include "aesd-circular-buffer.h"
 #include <linux/mutex.h>
+#include "aesd_ioctl.h"
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
@@ -362,7 +363,10 @@ void aesd_cleanup_module(void)
     unregister_chrdev_region(devno, 1);
 }
 
-
+size_t aesd_ioctl(struct file *file, size_t cmd, unsigned long arg){
+	
+	
+}
 
 
 
