@@ -34,8 +34,7 @@ THIS RETURNS THE ENTRY and POSITION of CHAR OFFSETer
 READ THE BUFFERS STARTING AT WHEREVER OUTPOINTER IS UNTIL YOU GET TO THE ENTRY THAT THIS RETURNS, AND WHEN YOU GET TO THIS ONE READ UP TO THE OFFSET BYTE
 
 */
-struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
-            size_t char_offset, size_t *entry_offset_byte_rtn )
+struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer, size_t char_offset, size_t *entry_offset_byte_rtn )
 {
 	size_t curr_searched_buffer_length=0;
 	size_t bufferinpos=buffer->in_offs;
@@ -163,5 +162,43 @@ struct aesd_buffer_entry *get_next_entry_in_buffer(struct aesd_buffer_entry* ent
 		}
 	return(&(circle_buf->entry[next_index]));			
 }
+
+size_t get_length_of_all_entries_in_buffer(struct aesd_circular_buffer *buffer){
+	size_t total_size=0;
+	uint8_t index;
+	struct aesd_buffer_entry *entry;
+	AESD_CIRCULAR_BUFFER_FOREACH(entry,buffer,index) {
+	   total_size = total_size + entry->size;
+	}
+	PDEBUG("RETURNING TOTAL SIZE OF BUFFER IS %ld",total_size);
+	return(total_size);
+	
+}
+
+size_t copy_data_between_endpoints_to_user(size_t start, size_t request_length, int fd, struct aesd_circular_buffer* buffer){
+	size_t initial_offset=0;
+	size_t first_index=0;
+	return(3);
+}
+/*
+	aesd_buffer_entry* current_entry = aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(buffer,start,&initial_offset);
+	//now we have a current_entry and offset to start at.
+	//get it's index:
+	first_index=get_index_of_current_entry(current_entry,buffer);
+	PDEBUG("!!Starting seek return at buffer with index %ld and offset of %ld",first_index,initial_offset);
+	bytes_returned=0;
+	bool first_run=false; //hackish!
+	while(bytes_returned < && ){
+		for buffer[index]
+		while(size_t_current_position=offset; current_position < (current_buffer_size) && bytes_returned < request_length);current_position++{
+			copy_to_user(current_buffer[current_position])
+		}
+	
+	
+	//create an array of pointers to the last entry
+
+
+}	
+*/
 size_t current_outbuffer_position=0;
 size_t original_outbuffer_position=0;
