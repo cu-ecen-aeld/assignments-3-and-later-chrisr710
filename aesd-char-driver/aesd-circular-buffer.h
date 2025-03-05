@@ -15,7 +15,24 @@
 #include <stdint.h> // uintx_t
 #include <stdbool.h>
 #endif
-#define NULL 0
+
+#define AESD_DEBUG 1  //Remove comment on this line to enable debug
+
+#undef PDEBUG             /* undef it, just in case */
+#ifdef AESD_DEBUG
+#  ifdef __KERNEL__
+     /* This one if debugging is on, and kernel space */
+#    define PDEBUG(fmt, args...) printk( KERN_DEBUG "aesdchar: " fmt, ## args)
+#  else
+     /* This one for user space */
+#    define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
+#  endif
+
+#else
+#  define PDEBUG(fmt, args...) /* not debugging: nothing */
+
+#endif
+
 #define AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED 10
 
 struct aesd_buffer_entry
@@ -62,6 +79,8 @@ extern void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer);
 size_t get_index_of_current_entry(struct aesd_buffer_entry* entry_to_check,struct aesd_circular_buffer * circle_buf);
 struct aesd_buffer_entry *get_next_entry_in_buffer(struct aesd_buffer_entry* entry_to_check,struct aesd_circular_buffer * circle_buf);
 size_t get_buffer_size_of_current_entry(struct aesd_buffer_entry* entry_to_check);
+size_t get_length_of_all_entries_in_buffer(struct aesd_circular_buffer *buffer);
+
 
 /**
  * Create a for loop to iterate over each member of the circular buffer.
