@@ -21,6 +21,7 @@
 #include "aesd-circular-buffer.h"
 #include <linux/mutex.h>
 #include "aesd_ioctl.h"
+
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
@@ -106,9 +107,9 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {	
 
-	size_t te=0;
-	uint8_t ix;
-	struct aesd_buffer_entry *tentry;
+	//size_t te=0;
+	//uint8_t ix;
+	//struct aesd_buffer_entry *tentry;
 	
 	ssize_t retval = 0;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
@@ -276,6 +277,7 @@ struct file_operations aesd_fops = {
     .open =     aesd_open,
 	.llseek =   aesd_llseek,
     .release =  aesd_release,
+	.unlocked_ioctl = aesd_ioctl
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)
@@ -362,10 +364,81 @@ void aesd_cleanup_module(void)
 
     unregister_chrdev_region(devno, 1);
 }
+//long int (*)       (struct file *,     unsigned int,     long unsigned int)
+long int aesd_ioctl(struct file *file, unsigned int cmd, long unsigned int arg){
+	struct aesd_seekto myseek;
+	struct aesd_dev *dev=file->private_data;
+	PDEBUG("%ld",sizeof(myseek));
+	switch(cmd){
+		case AESDCHAR_IOCSEEKTO:
+            char * mybuffer=kmalloc(500,GFP_KERNEL);
+            int mybufferposition=0;
+			copy_from_user(&myseek, (struct aesd_seekto*) arg, sizeof(myseek));
+			//now do the work of finding the items
+			uint32_t write_cmd = myseek.write_cmd;
+			uint32_t write_cmd_offset = myseek.write_cmd_offset;
+			char * special_buffer = myseek.special_buffer;
+            long total_bytes_to_read = get_length_of_all_entries_in_buffer(dev->circ_buf) - write_cmd_offset;
+            if (total_bytes_to_read < 1){total_bytes_to_read=0;}
+			
+			
+			//get the entry to read from
+			size_t curr_buffer_pos=dev->circ_buf->out_offs;
+			PDEBUG("SPECIAL COMMAND. READ BYTE FROM COMMAND # %ld with OFFSET %ld",write_cmd,write_cmd_offset);
+			if (write_cmd > 10){PDEBUG("request out of range");return(-EINVAL);};
+			size_t buff_to_read=curr_buffer_pos + write_cmd;
+			if (buff_to_read > 9){buff_to_read=buff_to_read-10;}
+			PDEBUG("SELECTED BUFFER IS %ld",buff_to_read);
+			long size_of_buff_to_read = dev->circ_buf->entry[buff_to_read].size;
+			long length_to_read = size_of_buff_to_read - write_cmd_offset;
+			
+			if (length_to_read < 1)
+                {length_to_read=0;}
+			PDEBUG("LENGTH OF BUFFER TO READ=%ld",length_to_read);
+            long bytes_sent=0;
+            long bytes_to_read_from_this_buffer=0;
+            int i=0;
+            PDEBUG("TOTAL BYTES TO READ FOR SPECIAL COMMAND= %ld",total_bytes_to_read);
+            while ((bytes_sent < total_bytes_to_read)){ 
+                    bytes_to_read_from_this_buffer = dev-> circ_buf->entry[buff_to_read].size - write_cmd_offset;  //for the first one only
+                    PDEBUG("Reading %ld bytes from buffer[%ld]",bytes_to_read_from_this_buffer,buff_to_read);
+                    for(;bytes_to_read_from_this_buffer > 0; bytes_to_read_from_this_buffer --){
+                        mybuffer[mybufferposition] = dev->circ_buf->entry[buff_to_read].buffptr[i + write_cmd_offset];
+                        i++;
+                        mybufferposition++;
+                        
+                        bytes_sent++; //this could be simplified. However it is late and I know this works. I understood the requirements wrong and had a beautiful program before.
+                     
+                    }
+                    PDEBUG("Exiting for loop, bytes sent is %ld",bytes_sent);
+                    i=0;
+                    write_cmd_offset=0;
+                    buff_to_read = buff_to_read +1;
+                    if (buff_to_read == AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED){
+                        //maybe break here
+                        buff_to_read=0;
+                    }
+                    if (buff_to_read == dev->circ_buf->out_offs){
+                        PDEBUG("REACHED INPUT POINTER");
+                        break;} 
+                    PDEBUG("Considering reitieration. Bytes sent: %ld total_bytes_to_read %ld",bytes_sent,total_bytes_to_read);
+            }        
+                 
+            
+			copy_to_user(special_buffer,mybuffer,mybufferposition);
+			myseek.length_copied=mybufferposition;
+			copy_to_user((struct aesd_seekto*) arg,&myseek,sizeof(myseek));
+			PDEBUG("DONE!!");
+			kfree(mybuffer);
+            
 
-size_t aesd_ioctl(struct file *file, size_t cmd, unsigned long arg){
+		break;;
+
+	}
+		
+		
 	
-	
+	return(0);
 }
 
 

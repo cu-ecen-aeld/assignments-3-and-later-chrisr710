@@ -23,6 +23,7 @@
 #define TIME_SIZE 70
 #include <time.h>
 #include <sys/time.h>
+#include "aesd_ioctl.h"
 
 bool close_socket_when_receive_delim=false;
 bool use_dev=false;
@@ -36,6 +37,68 @@ int thread_id_counter=0; //this is so each new thread gets a nice number.
 bool should_quit=false; //when this is set to true, the loops stop.
 pthread_mutex_t linked_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+long handle_ioctl_commainds(char * buffer, long length){
+   //printf("checking for length %ld\n",length);
+   if ((length < 23) || (length > 27)) {return(-1);} //there is not enough data here
+    char orig_char=buffer[length];
+    buffer[length] = '\0'; //make a real string out of it, temporarily
+    char test_string[]="AESDCHAR_IOCSEEKTO:"; //what we look for
+    char *p;
+    p = strstr(buffer, test_string);
+    if (p == 0){
+         buffer[length] = orig_char;    
+        return(-1);}
+    //this is the command string
+    //printf("COMMAND STRING RECEIVED\n");
+    char start_buffer_string[4];
+    char start_offset_string[4];
+    int i=0;
+    int j=0;
+    int k=0;
+    
+    for (;i<length;i++){
+        
+        if (buffer[i] == ':'){break;}
+    }
+    i++;
+    for (;i<length;i++){
+        //printf("real buffer at %d = %c\n",i,buffer[i]);
+        if (buffer[i] == ','){break;}
+        
+        else{start_buffer_string[j]=buffer[i];}
+            j++;    
+        //printf("J=%d\n",j);
+    }
+        start_buffer_string[j]='\0';
+    
+    i++;
+        
+    for (;i<length;i++){
+        start_offset_string[k]=buffer[i];
+        //printf("real buffer at %d = %c\n",i,buffer[i]);
+        if (buffer[i] == '\n'){start_offset_string[i]='\0';}
+            
+        k++;
+        //this will include the null
+    }
+    
+    size_t start_buffer_position=atoi(start_buffer_string);
+    size_t start_buffer_offset=atoi(start_offset_string);
+    //printf("Start buffer position=%ld ",start_buffer_position);
+    //printf("start buffer offset = %ld\n" ,start_buffer_offset);
+    
+    struct aesd_seekto test = {start_buffer_position,start_buffer_offset,0,buffer};
+	//printf("sent request\n");
+	int dev = open("/dev/aesdchar",O_WRONLY);
+	ioctl(dev, AESDCHAR_IOCSEEKTO, &test);
+    //printf("%ld BYTES RETURNED\n", test.length_copied);
+	//printf("%s\n",buffer);
+	close(dev);
+    return(test.length_copied);
+} 
+    
 
 
 //Makes a node for the linked list
@@ -102,7 +165,7 @@ void dump_buffer_to_file(long length_to_dump, char * buffer){
 	fd=open(outfile,O_WRONLY);	
 	}
 	if (fd < 1){
-		printf("ERROR OPENING OUTFILE TO WRITE\n");
+		//printf("ERROR OPENING OUTFILE TO WRITE\n");
 		if (! use_dev){
 			pthread_mutex_unlock(&file_mutex);
 		}
@@ -118,9 +181,9 @@ void dump_buffer_to_file(long length_to_dump, char * buffer){
 
 
 long find_delimter_position(char * buffer,long buffer_pos,long bytes_received_this_iteration){
-	////printf("searching for delimiter starting at position: %ld\n",buffer_pos);
+	//printf("searching for delimiter starting at position: %ld\n",buffer_pos);
 	for (long i= buffer_pos; i<(buffer_pos + bytes_received_this_iteration); i++){
-		////printf("looking for delimiter at %ld, found:%c\n",i,buffer[i]);
+		//printf("looking for delimiter at %ld, found:%c\n",i,buffer[i]);
 		if (buffer[i] == '\n'){
 			//printf("found delimiter at %ld\n",i);
 			return(i);
@@ -130,7 +193,7 @@ long find_delimter_position(char * buffer,long buffer_pos,long bytes_received_th
 	}
 
 int dump_file_to_socket(int socket_fd){
-	////printf("the filename I will read to send out data is:%s\n",outfile);
+	//printf("the filename I will read to send out data is:%s\n",outfile);
 	int file_buffer_size=100;
 	char * out_buffer[file_buffer_size];
 	
@@ -139,9 +202,9 @@ int dump_file_to_socket(int socket_fd){
 	}
 	//printf("FILE IS LOCKED\n");
 	int fd=open(outfile, O_RDONLY);
-	////printf("FD for outfile=%d\n",fd);
+	//printf("FD for outfile=%d\n",fd);
 	if (fd < 1){
-		printf("ERROR OPENING OUTFILE TO READ\n");
+		//printf("ERROR OPENING OUTFILE TO READ\n");
 		if (! use_dev){
 			pthread_mutex_unlock(&file_mutex);
 		}
@@ -149,7 +212,7 @@ int dump_file_to_socket(int socket_fd){
 	long curr_file_offset=0;
 	
 	while (1){
-			////printf("Reading outfile, curr_bytes_read=%ld\n",curr_file_offset);
+			//printf("Reading outfile, curr_bytes_read=%ld\n",curr_file_offset);
 			lseek(fd, curr_file_offset, SEEK_SET); //go to curr_offset point in the file...
 			int curr_bytes_read = read(fd, out_buffer, file_buffer_size); //read up to the size of the buffer into the buffer
 			if (curr_bytes_read > 0){
@@ -175,7 +238,7 @@ struct connection_worker_params{
 	};
 	
 void * connection_worker(void * arg){
-	////printf("connection worker started!\n");
+	//printf("connection worker started!\n");
 	
 	char * buffer = malloc(BUFFER_SIZE);
 	int buffer_size=BUFFER_SIZE;
@@ -187,10 +250,10 @@ void * connection_worker(void * arg){
 	struct node *e=(struct node *) arg;
 	int fd=e->fd;
 	char remote_ip_str[REMOTE_IP_SIZE];
-	////printf("THe configured remote ip address:%s\n",f->ip_addr);
+	//printf("THe configured remote ip address:%s\n",f->ip_addr);
 	strcpy(remote_ip_str,e->ip_addr);
 	//char *remote_ip_str=f->ip_addr;
-	////printf("remote ip:%s\n",remote_ip_str);
+	//printf("remote ip:%s\n",remote_ip_str);
 	syslog(LOG_INFO,"Accepted connection from %s",remote_ip_str);
 	//printf("NEW CONNECTION!\n");
 	pthread_mutex_unlock(&linked_list_mutex);
@@ -206,7 +269,7 @@ void * connection_worker(void * arg){
 					bytes_received=recv(fd,buffer+total_bytes_received,available_buffer,0); //receive starting at new buffer
 					//printf("node %d bytes_received=%ld\n",f->id,bytes_received);
 					if (bytes_received < 1){
-											printf("connection closed; done\n");
+											//printf("connection closed; done\n");
 											syslog(LOG_INFO,"Closed connection from %s",remote_ip_str);
 											//printf("got a hangup\n");
 											break;
@@ -231,19 +294,19 @@ void * connection_worker(void * arg){
 					}
 					else{
 						//we have found the delimiter
-						printf("dumping buffer to file\n");
+						//printf("dumping buffer to file\n");
 						//char instring[500];
 						//int x=0;
 						//printf("BYTES RECEIVED HERE IS:%ld\n",bytes_received);
 						//for (x; x<bytes_received;x++ ){
 						//	instring[x]=buffer[x];
-							////printf("adding %c to instring\n",buffer[x]);
+							//printf("adding %c to instring\n",buffer[x]);
 						//}
 						//instring[x+1]='\0';
 						//printf("string being recorded: %s\n\n",instring);
 						
 						dump_buffer_to_file(total_bytes_received,buffer); //now however many bytes were received is dumped to file
-						printf("dumping file to socket\n");
+						//printf("dumping file to socket\n");
 						dump_file_to_socket(fd);
 						
 						//cleanup and wait for more, or close connection?
@@ -268,19 +331,34 @@ void * connection_worker(void * arg){
 	
 		//in this case, everything we receive we dump to the socket. IF it contains the delim, write back the socket
 		
-			printf("receiving in dev mode\n");
+			//printf("receiving in dev mode\n");
 			bytes_received=recv(fd,buffer,available_buffer,0); //receive starting at new buffer
 			if (bytes_received < 1){
-										printf("connection closed; done\n");
+										//printf("connection closed; done\n");
 										syslog(LOG_INFO,"Closed connection from %s",remote_ip_str);
 										//printf("got a hangup\n");
 										break;
 				}
+            //printf("receiginb\n");
+            long bytes_received_from_ioctl=handle_ioctl_commainds(buffer, bytes_received);
+            //printf("ioctl returned %ld\n",bytes_received_from_ioctl);
+            if (bytes_received_from_ioctl >1){
+                //printf("Bytes with COMMAND!\n");
+                send(fd,buffer,bytes_received_from_ioctl,0); //send up to the amount of bytes read from the socket    
+                bytes_received=0;
+                continue;
+            }
+            if (bytes_received_from_ioctl ==0){ //had a command, but didn't return anything
+               //send up to the amount of bytes read from the socket 
+                //printf("Threw a blank!\n");
+                bytes_received=0;
+                continue;
+            }
 			dump_buffer_to_file(bytes_received,buffer);
-			printf("DUMPED %ld bytes to the file",bytes_received);
+			//printf("DUMPED %ld bytes to the file",bytes_received);
 			delimiter_position=find_delimter_position(buffer,0,bytes_received);
 			if (delimiter_position != -1){
-				printf("delimiter received,dumping all previous commands");
+				//printf("delimiter received,dumping all previous commands");
 				dump_file_to_socket(fd);			
 			}
 		
@@ -320,9 +398,9 @@ void cleanup(void) {
 	//printf("joining threads\n");
     TAILQ_FOREACH(e, &head, nodes)
     {
-        ////printf("thread id %d\n", e->id);
+        //printf("thread id %d\n", e->id);
 		pthread_join(e->mythread,NULL);
-		////printf("closing fd %d\n",e->fd);
+		//printf("closing fd %d\n",e->fd);
 		close(e->fd);
     }
 	close(parent_fd);
@@ -357,7 +435,7 @@ int open_socket(void){
 			int binding_output=bind(parent_fd, res->ai_addr, res->ai_addrlen);
 			//printf("binding output:%d\n",binding_output);
 			syslog(LOG_INFO,"BINDING FINISHED, output is %d",binding_output);
-			////printf("Binding returned:%d\n",binding_output);
+			//printf("Binding returned:%d\n",binding_output);
 			if (binding_output != 0){syslog(LOG_INFO,"BINDING UNSUCCESSFUL");
 									syslog(LOG_INFO,"EXITING");
 									return(1);
@@ -401,7 +479,7 @@ int open_socket(void){
 
 void delete_file(void){
 	unlink (outfile); 
-	////printf("removed file\n");
+	//printf("removed file\n");
 	}
 	
 void sigint_handler(int sig) {
@@ -418,12 +496,12 @@ void sigint_handler(int sig) {
 			
 int main(){
 	#ifdef USE_AESD_CHAR_DEVICE
-	printf("USING AESDCHAR DEVICE\n");
+	//printf("USING AESDCHAR DEVICE\n");
 	use_dev=true;
 	#endif
 	if (use_dev){
 	outfile="/dev/aesdchar";
-	printf("outfile is %s\n",outfile);
+	//printf("outfile is %s\n",outfile);
 	}
 	//printf("BIRD\n");
 	signal(SIGINT, sigint_handler);

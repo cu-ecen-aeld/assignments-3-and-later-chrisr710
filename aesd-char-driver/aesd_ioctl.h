@@ -16,7 +16,22 @@
 #else
 #include <sys/ioctl.h>
 #include <stdint.h>
+#include <linux/module.h>
+
+
+
+
+
 #endif
+#include <linux/init.h>
+#include <linux/printk.h>
+#include <linux/types.h>
+#include <linux/cdev.h>
+#include <linux/fs.h> // file_operations
+#include "aesdchar.h"
+#include "aesd-circular-buffer.h"
+#include <linux/mutex.h>
+#include "aesd_ioctl.h"
 
 /**
  * A structure to be passed by IOCTL from user space to kernel space, describing the type
@@ -31,8 +46,13 @@ struct aesd_seekto {
      * The zero referenced offset within the write
      */
     uint32_t write_cmd_offset;
+	
+	
+	size_t length_copied;
+	
+	char * special_buffer;
 };
-
+long int aesd_ioctl(struct file *file, unsigned int cmd, long unsigned int arg);
 // Pick an arbitrary unused value from https://github.com/torvalds/linux/blob/master/Documentation/userspace-api/ioctl/ioctl-number.rst
 #define AESD_IOC_MAGIC 0x16
 

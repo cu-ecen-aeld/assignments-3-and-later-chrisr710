@@ -30,6 +30,6 @@ struct aesd_dev
 	struct aesd_circular_buffer *circ_buf;
     struct cdev cdev;     /* Char device structure      */
 };
-
+long int aesd_ioctl(struct file *file, unsigned int cmd, long unsigned int arg);
 
 #endif /* AESD_CHAR_DRIVER_AESDCHAR_H_ */
