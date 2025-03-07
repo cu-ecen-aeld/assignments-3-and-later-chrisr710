@@ -295,8 +295,9 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
 	else
 		{PDEBUG("THE BUFFER IS NOT NULL AND THE SIZE IS %ld",dev->read_buf->size);}
 	PDEBUG("circular buffer init at %p",dev->circ_buf);
+	dev->lock;
 	mutex_init(&dev->lock);
-	PDEBUG("initialized semaphore! ");
+	PDEBUG("initialized semaphore!");
 	PDEBUG("Set up the read buffer");
     int err, devno = MKDEV(aesd_major, aesd_minor);
 
@@ -371,6 +372,8 @@ long int aesd_ioctl(struct file *file, unsigned int cmd, long unsigned int arg){
 	PDEBUG("%ld",sizeof(myseek));
 	switch(cmd){
 		case AESDCHAR_IOCSEEKTO:
+			if (mutex_lock_interruptible(&dev->lock))
+				{return -ERESTARTSYS;}	
             char * mybuffer=kmalloc(500,GFP_KERNEL);
             int mybufferposition=0;
 			copy_from_user(&myseek, (struct aesd_seekto*) arg, sizeof(myseek));
@@ -430,7 +433,7 @@ long int aesd_ioctl(struct file *file, unsigned int cmd, long unsigned int arg){
 			copy_to_user((struct aesd_seekto*) arg,&myseek,sizeof(myseek));
 			PDEBUG("DONE!!");
 			kfree(mybuffer);
-            
+            mutex_unlock(&dev->lock);
 
 		break;;
 
